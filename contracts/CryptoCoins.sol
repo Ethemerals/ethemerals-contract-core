@@ -37,12 +37,14 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     event MaxEditionsEvent (uint indexed editions);
     event MintPriceEvent (uint indexed amount);
     event MaxedClassEvent (uint indexed classId);
-    event ChangeScoreEvent (uint indexed id, uint indexed score, bool indexed add);
-    event WithdrawEvent (address indexed to, uint indexed amount);
+    event ChangeScoreEvent (uint indexed id, uint indexed score, bool indexed add, uint rewards);
+    event WithdrawEvent (address indexed to, uint  amount);
+    event RedeemEvent (uint indexed id, uint amount);
+    event StakedEvent (uint indexed id, bool indexed staked);
 
-    uint public iniReward = 10000000000000000;
-    uint public iniScore = 300;
-    uint public nonce;
+    uint private iniReward = 100000000000000000000;
+    uint private iniScore = 300;
+    uint private nonce;
     uint public testValue;
 
     // Gold 0
@@ -61,8 +63,9 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
 
     // Rewards token
     address public tokenAddress;
+
     // iterable array of available classes
-    uint[] public availableCoins;
+    uint[] private availableCoins;
     uint public maxEditions = 10;
     uint public mintPrice = 100000000000000000;
 
@@ -81,8 +84,12 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     function redeemTokens(uint _tokenId) external {
         // require owner and balance
         uint amount = coinEditions[_tokenId / 10][_tokenId % 10].rewards;
-        IERC20(tokenAddress).transfer(msg.sender, amount);
+        require(IERC20(tokenAddress).balanceOf(address(this)) >= amount, 'amount to much');
+        require(balanceOf(_msgSender(), _tokenId) > 0, "CCC: must have token");
         coinEditions[_tokenId / 10][_tokenId % 10].rewards = 0;
+        IERC20(tokenAddress).transfer(msg.sender, amount);
+
+        emit RedeemEvent(_tokenId, amount);
     }
 
     function setAvailableCoins(uint min, uint max, uint _maxEditions) external {
@@ -129,7 +136,6 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
       while(availableCoins.length > 0) {
         max = availableCoins.length;
         randCoinClass = _random(max);
-        testValue = randCoinClass; // test
         coinClass = availableCoins[randCoinClass];
         edition = coinEditions[coinClass].length;
 
@@ -198,10 +204,18 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     }
 
 
+    // REDO WITH CORRECT TOKEN need admin require GAMEMASTER
+    function changeScore(uint _tokenId, uint offset, bool add) public {
+      changeScore(_tokenId, offset, add, 0);
+    }
 
-    // REDO WITH CORRECT TOKEN need admin
-    function changeScore(uint _tokenId, uint offset, bool add) external {
-      uint _score = coinEditions[_tokenId / 10][_tokenId % 10].score;
+    function changeScore(uint _tokenId, uint offset, bool add, uint amount) public {
+      uint tokenClass = _tokenId / 10;
+      uint tokenEdition = _tokenId % 10;
+      require(coinEditions[tokenClass][tokenEdition].id == _tokenId, 'CCC: token doesnt exist');
+      require(amount >= 0 && amount <= 1000000000000000000000, 'CCC: amount needs to be clamped');
+
+      uint _score = coinEditions[tokenClass][tokenEdition].score;
       uint newScore;
       if (add) {
         uint sum = _score + offset;
@@ -214,13 +228,20 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
         }
       }
       // should emit event
-      coinEditions[_tokenId / 10][_tokenId % 10].score = newScore;
-      emit ChangeScoreEvent(_tokenId, newScore, add);
+      coinEditions[tokenClass][tokenEdition].score = newScore;
+      coinEditions[tokenClass][tokenEdition].rewards += amount;
+      emit ChangeScoreEvent(_tokenId, newScore, add, amount);
     }
 
-    function getCoin(uint cClass, uint cEdition) external view returns(Coin memory) {
-      return coinEditions[cClass][cEdition];
+    // TODO set staking true or false requires GAMEMASTER
+    function setStaked(uint _tokenId, bool _staked) public {
+      uint tokenClass = _tokenId / 10;
+      uint tokenEdition = _tokenId % 10;
+      require(coinEditions[tokenClass][tokenEdition].id == _tokenId, 'CCC: token doesnt exist');
+      coinEditions[tokenClass][tokenEdition].staked = _staked;
+      emit StakedEvent(_tokenId, _staked);
     }
+
 
     function getCoinById(uint _tokenId) external view returns(Coin memory) {
       return coinEditions[_tokenId / 10][_tokenId % 10];
@@ -239,6 +260,9 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     function getAvailableCoins() external view returns (uint[] memory) {
       return availableCoins;
     }
+
+
+    // TODO before hook
 
 }
 
