@@ -14,7 +14,11 @@ import "../openzep/token/ERC20/IERC20.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 
 //5000000 gas limit
+//"https://d1b1rc939omrh2.cloudfront.net/api/meta/{id}", "0x320d8AE8984E40949126E95e493871f8C99baAC1"
 
+interface IERC20Burnable {
+    function burn(uint256 amount) external;
+}
 
 /**
  * @dev {ERC1155} token, including:
@@ -40,8 +44,10 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     event ChangeScoreEvent (uint indexed id, uint indexed score, bool indexed add, uint rewards);
     event WithdrawEvent (address indexed to, uint  amount);
     event RedeemEvent (uint indexed id, uint amount);
+    event RedeemWinnerFundsEvent (address indexed to, uint amount);
     event StakedEvent (uint indexed id, bool indexed staked);
 
+    uint public winnerFunds;
     uint private iniReward = 100000000000000000000;
     uint private iniScore = 300;
     uint private nonce;
@@ -81,6 +87,7 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
         tokenAddress = _tokenAddress;
     }
 
+    //redeem erc20 tokens and burn some more
     function redeemTokens(uint _tokenId) external {
         // require owner and balance
         uint amount = coinEditions[_tokenId / 10][_tokenId % 10].rewards;
@@ -88,9 +95,9 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
         require(balanceOf(_msgSender(), _tokenId) > 0, "CCC: must have token");
         coinEditions[_tokenId / 10][_tokenId % 10].rewards = 0;
         IERC20(tokenAddress).transfer(msg.sender, amount);
-
         emit RedeemEvent(_tokenId, amount);
     }
+
 
     function setAvailableCoins(uint min, uint max, uint _maxEditions) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "CCC: must have admin role");
@@ -205,10 +212,6 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
 
 
     // REDO WITH CORRECT TOKEN need admin require GAMEMASTER
-    function changeScore(uint _tokenId, uint offset, bool add) public {
-      changeScore(_tokenId, offset, add, 0);
-    }
-
     function changeScore(uint _tokenId, uint offset, bool add, uint amount) public {
       uint tokenClass = _tokenId / 10;
       uint tokenEdition = _tokenId % 10;
@@ -227,10 +230,23 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
           newScore = _score - offset;
         }
       }
-      // should emit event
       coinEditions[tokenClass][tokenEdition].score = newScore;
       coinEditions[tokenClass][tokenEdition].rewards += amount;
+
       emit ChangeScoreEvent(_tokenId, newScore, add, amount);
+
+      //fee burn and winner fund
+      //200 basis points = 2pct
+      //2pct burnt, 2pct sent to season fund
+      uint tokenBalance = IERC20(tokenAddress).balanceOf(address(this));
+      if(amount > 1000000000 && winnerFunds < tokenBalance)  { //1 Gwei
+        uint fundAmount = amount * 500 / 10000;
+        uint burnAmount = amount * 200 / 10000;
+        if( winnerFunds + fundAmount + burnAmount < tokenBalance) {
+          winnerFunds += fundAmount;
+          IERC20Burnable(tokenAddress).burn(burnAmount);
+        }
+      }
     }
 
     // TODO set staking true or false requires GAMEMASTER
@@ -243,10 +259,18 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     }
 
 
+    function redeemWinnerFunds() external {
+      // TODO require winner = winner address
+      require(IERC20(tokenAddress).balanceOf(address(this)) >= winnerFunds, 'not enough funds');
+      uint amount = winnerFunds;
+      winnerFunds = 0;
+      IERC20(tokenAddress).transfer(msg.sender, amount);
+      emit RedeemWinnerFundsEvent(msg.sender, amount);
+    }
+
     function getCoinById(uint _tokenId) external view returns(Coin memory) {
       return coinEditions[_tokenId / 10][_tokenId % 10];
     }
-
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -254,7 +278,6 @@ contract CryptoCoins is Context, AccessControlEnumerable, ERC1155 {
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-
 
     // TEST
     function getAvailableCoins() external view returns (uint[] memory) {

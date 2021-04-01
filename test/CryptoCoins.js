@@ -5,7 +5,7 @@ const Game = artifacts.require('CryptoCoins');
 
 const datax = "0x0";
 
-contract('Game', accounts => {
+contract('ERC1155', accounts => {
   let game;
   const [admin, player1, player2] = [accounts[0], accounts[1], accounts[2]];
 
@@ -236,19 +236,19 @@ contract('Game', accounts => {
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
     console.log(token.score);
-    await game.changeScore(10, 250, true);
+    await game.changeScore(10, 250, true, '0');
 
     token = await game.getCoinById(10);
     assert(token.score == 550);
     console.log(token.score);
 
-    await game.changeScore(10, 500, true);
+    await game.changeScore(10, 500, true, '0');
     token = await game.getCoinById(10);
     assert(token.score == 1000);
-    await game.changeScore(10, 600, false);
+    await game.changeScore(10, 600, false, '0');
     token = await game.getCoinById(10);
     assert(token.score == 400);
-    await game.changeScore(10, 600, false);
+    await game.changeScore(10, 600, false, '0');
     token = await game.getCoinById(10);
     assert(token.score == 0);
   })
@@ -256,8 +256,9 @@ contract('Game', accounts => {
   it('should redeem tokens', async () => {
     // Transfer CCT
     await cct.transfer(game.address, web3.utils.toWei('100000000'))
-    value = await cct.balanceOf(game.address);
+    let value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
+    console.log(value.toString());
 
     await game.setAvailableCoins(1,1,1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
@@ -272,6 +273,8 @@ contract('Game', accounts => {
     rewards = token.rewards;
     assert(rewards.toString() === '0');
 
+    value = await cct.balanceOf(game.address);
+    console.log(value.toString());
   })
 
   it('should NOT redeem tokens', async () => {
@@ -326,7 +329,7 @@ contract('Game', accounts => {
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await expectRevert.unspecified(
-      game.changeScore(11, 100, true)
+      game.changeScore(11, 100, true, '0')
     );
 
     await expectRevert(
@@ -358,6 +361,63 @@ contract('Game', accounts => {
     await expectRevert.unspecified(
       game.setStaked(11, true)
     );
+
+  })
+
+  it.only('should increase winnerFund and burn some tokens and redeem', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('100000000'));
+    let balance = await cct.balanceOf(game.address);
+
+    await game.setAvailableCoins(1,1,1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+
+    let count = 0;
+    while(count < 20) {
+      await game.changeScore(10, 0, false, web3.utils.toWei('200'));
+      await time.increase(1);
+      count++;
+    }
+
+    await game.redeemWinnerFunds({from: player1});
+    balance = await cct.balanceOf(player1);
+    assert(web3.utils.fromWei(balance.toString()) == '200')
+
+  })
+
+  it('should keep scoring even without funds', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('100'));
+    let balance = await cct.balanceOf(game.address);
+    console.log('game balance', balance.toString());
+    let value = await game.winnerFunds();
+    console.log('winner funds', value.toString());
+
+    await game.setAvailableCoins(1,1,1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+
+    let count = 0;
+    while(count < 20) {
+      await game.changeScore(10, 0, false, web3.utils.toWei('200'));
+      await time.increase(1);
+      count++;
+    }
+
+    let token = await game.getCoinById(10);
+    let rewards = token.rewards;
+    console.log('coin rewards', rewards.toString());
+
+    value = await game.winnerFunds();
+    console.log('winner funds', value.toString());
+
+    balance = await cct.balanceOf(game.address);
+    console.log('game balance', balance.toString());
+
+    await game.redeemWinnerFunds({from: player1})
+    value = await cct.balanceOf(player1);
+    console.log('player balance', value.toString())
+
+    value = await game.winnerFunds();
+    console.log('winner funds', value.toString());
+
 
   })
 
