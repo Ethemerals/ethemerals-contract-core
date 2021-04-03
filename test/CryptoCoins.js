@@ -39,15 +39,13 @@ contract('ERC1155', accounts => {
 
   it('should set MintPrice and buy', async () => {
 
-    await game.setAvailableCoins(1,2,1);
+    await game.setAvailableCoins([1,2]);
     let testValue;
     let balance = await web3.eth.getBalance(player2);
 
-    for (let i = 0; i < 2; i ++) {
+    for (let i = 0; i < 20; i ++) {
       await game.buy({from: player2, value: web3.utils.toWei('1')});
       await time.increase(1);
-      testValue = await game.testValue();
-      console.log(testValue.toNumber());
     }
 
     // check balance of p2
@@ -62,7 +60,7 @@ contract('ERC1155', accounts => {
     balance = await web3.eth.getBalance(player2);
 
     // get more editions
-    await game.setAvailableCoins(1,2,10);
+    await game.setAvailableCoins([3,4]);
     await game.setMintPrice(web3.utils.toWei('10'));
 
     for (let i = 0; i < 4; i ++) {
@@ -76,7 +74,7 @@ contract('ERC1155', accounts => {
 
   it('should grant Minter role to player1 and mint token', async () => {
 
-    await game.setAvailableCoins(1,1,10);
+    await game.setAvailableCoin(1);
 
     const minterRole = web3.utils.soliditySha3("MINTER_ROLE");
     const amount = 10;
@@ -96,7 +94,7 @@ contract('ERC1155', accounts => {
 
   it('should Mint 20 tokens', async () => {
 
-    await game.setAvailableCoins(1,2,10);
+    await game.setAvailableCoins([1,2]);
     let availableCoins = await game.getAvailableCoins();
     console.log('availableCoins', availableCoins.toString())
 
@@ -123,7 +121,7 @@ contract('ERC1155', accounts => {
 
   it('should Mint 20 tokens then revert', async () => {
 
-    await game.setAvailableCoins(1,2,10);
+    await game.setAvailableCoins([1,2]);
     await game.setMintPrice(web3.utils.toWei('0.001'));
 
     for (let i = 0; i < 20; i ++) {
@@ -156,7 +154,7 @@ contract('ERC1155', accounts => {
 
   it('should Mint then revert then Mint again', async () => {
 
-    await game.setAvailableCoins(1,2,10);
+    await game.setAvailableCoins([1,2]);
     await game.setMintPrice(web3.utils.toWei('0.001'));
 
     for (let i = 0; i < 20; i ++) {
@@ -169,7 +167,7 @@ contract('ERC1155', accounts => {
       "CCC: No more to mint"
     );
 
-    await game.setAvailableCoins(5,6,10);
+    await game.setAvailableCoins([5,6]);
 
     for (let i = 0; i < 20; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('0.001')}),
@@ -185,7 +183,7 @@ contract('ERC1155', accounts => {
 
   it('should Mint then return coin with 300 score', async () => {
 
-    await game.setAvailableCoins(5,6,10);
+    await game.setAvailableCoins([5,6]);
     await game.setMintPrice(web3.utils.toWei('0.001'));
 
     for (let i = 0; i < 20; i ++) {
@@ -205,22 +203,9 @@ contract('ERC1155', accounts => {
     assert(coin2.rewards == web3.utils.toWei('100'));
   })
 
-  it('should NOT be able to setAvailableCoins', async () => {
-
-    await expectRevert(
-      game.setAvailableCoins(0,1,1),
-      "CCC: to many coins"
-    );
-
-    await expectRevert(
-      game.setAvailableCoins(1,10,11),
-      "CCC: to many editions"
-    );
-  });
-
   it('should NOT buy without enough ETH', async () => {
 
-    await game.setAvailableCoins(1,2,1);
+    await game.setAvailableCoins([1,2]);
     await game.setMintPrice(web3.utils.toWei('1'));
 
     await expectRevert(
@@ -232,7 +217,7 @@ contract('ERC1155', accounts => {
   // TODO
   it('should Update token score', async () => {
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
     console.log(token.score);
@@ -260,7 +245,7 @@ contract('ERC1155', accounts => {
     assert(value.toString() === web3.utils.toWei('100000000'))
     console.log(value.toString());
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
     let rewards = token.rewards;
@@ -283,7 +268,7 @@ contract('ERC1155', accounts => {
     value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await expectRevert(
@@ -303,7 +288,7 @@ contract('ERC1155', accounts => {
     let value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await game.changeScore(10, 0, false, web3.utils.toWei('100'))
@@ -325,7 +310,7 @@ contract('ERC1155', accounts => {
     let value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await expectRevert.unspecified(
@@ -344,7 +329,7 @@ contract('ERC1155', accounts => {
     let value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     let token = await game.getCoinById(10);
@@ -364,11 +349,11 @@ contract('ERC1155', accounts => {
 
   })
 
-  it.only('should increase winnerFund and burn some tokens and redeem', async () => {
+  it('should increase winnerFund and redeem', async () => {
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
     let balance = await cct.balanceOf(game.address);
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     let count = 0;
@@ -378,20 +363,49 @@ contract('ERC1155', accounts => {
       count++;
     }
 
-    await game.redeemWinnerFunds({from: player1});
+    let value = await game.winningCoin();
+    console.log(value.toString());
+
+    await game.redeemWinnerFunds(10, {from: player1});
     balance = await cct.balanceOf(player1);
-    assert(web3.utils.fromWei(balance.toString()) == '200')
+    console.log(balance.toString());
+    assert(web3.utils.fromWei(balance.toString()) == '84')
+
+  })
+
+  it('should update winning coin and redeem', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('100000000'));
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+
+
+    await game.changeScore(10, 0, false, web3.utils.toWei('200'));
+    let value = await game.winningCoin();
+    assert(value.toString() == '10');
+    await game.changeScore(11, 0, false, web3.utils.toWei('300'));
+    value = await game.winningCoin();
+    assert(value.toString() == '11');
+
+    await game.redeemWinnerFunds(11, {from: player2});
+    balance = await cct.balanceOf(player2);
+    console.log(balance.toString());
+
+    await game.changeScore(10, 0, false, web3.utils.toWei('200'));
+    value = await game.winningCoin();
+    assert(value.toString() == '10');
 
   })
 
   it('should keep scoring even without funds', async () => {
-    await cct.transfer(game.address, web3.utils.toWei('100'));
+    await cct.transfer(game.address, web3.utils.toWei('20'));
     let balance = await cct.balanceOf(game.address);
-    console.log('game balance', balance.toString());
+    // console.log('game balance', balance.toString());
     let value = await game.winnerFunds();
-    console.log('winner funds', value.toString());
+    // console.log('winner funds', value.toString());
 
-    await game.setAvailableCoins(1,1,1);
+    await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     let count = 0;
@@ -401,30 +415,76 @@ contract('ERC1155', accounts => {
       count++;
     }
 
-    let token = await game.getCoinById(10);
-    let rewards = token.rewards;
-    console.log('coin rewards', rewards.toString());
+    // let token = await game.getCoinById(10);
+    // let rewards = token.rewards;
+    // console.log('coin rewards', rewards.toString());
 
     value = await game.winnerFunds();
     console.log('winner funds', value.toString());
-
+    assert(value.toString() == web3.utils.toWei('84'))
     balance = await cct.balanceOf(game.address);
-    console.log('game balance', balance.toString());
+    // console.log('game balance', balance.toString());
 
-    await game.redeemWinnerFunds({from: player1})
-    value = await cct.balanceOf(player1);
-    console.log('player balance', value.toString())
+
+    await expectRevert(
+      game.redeemWinnerFunds(10, {from: player1}),
+      'CCC: not enough funds'
+    );
+
+    // value = await cct.balanceOf(player1);
+    // console.log('player balance', value.toString())
+
+    // value = await game.winnerFunds();
+    // console.log('winner funds', value.toString());
+
+    // balance = await cct.balanceOf(game.address);
+    // console.log('game balance', balance.toString());
+  })
+
+  it.only('should update multiplier', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+
+    let count = 0;
+    let value;
+    while(count < 220) {
+      await game.changeScore(10, 0, false, web3.utils.toWei('10'));
+      await time.increase(1);
+      count++;
+    }
+
+    value = await game.winnerMult();
+    assert(value.toString() == '8');
 
     value = await game.winnerFunds();
-    console.log('winner funds', value.toString());
+    await game.redeemWinnerFunds(10, {from: player1});
 
+    // reset mult
+    await game.changeScore(11, 0, true, web3.utils.toWei('10'));
+    value = await game.winnerMult();
+    assert(value.toString() == '1');
+
+    count = 0;
+    while(count < 100) {
+      await game.changeScore(11, 0, false, web3.utils.toWei('10'));
+      await time.increase(1);
+      count++;
+    }
+    value = await game.winnerMult();
+    assert(value.toString() == '6');
 
   })
 
+  // it.only('should Mint 1000 tokens', async () => {
 
-  // it('should Mint 1000 tokens', async () => {
-
-  //   await game.setAvailableCoins(1,100,10);
+  //   let coinClass = [];
+  //   for(let i = 1; i < 101; i ++) {
+  //     coinClass.push(i);
+  //   }
+  //   await game.setAvailableCoins(coinClass);
   //   await game.setMintPrice(web3.utils.toWei('0.01'));
   //   let availableCoins = await game.getAvailableCoins();
   //   console.log('availableCoins', availableCoins.toString())
