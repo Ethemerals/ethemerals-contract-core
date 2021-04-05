@@ -17,7 +17,7 @@ contract('ERC1155', accounts => {
   it('should NOT mint if not admin', async () => {
     await expectRevert(
       game.mint(player1, 0, 1, datax, {from: player1}),
-      "CCC: must have minter role to mint"
+      "minter only"
     );
   })
 
@@ -54,7 +54,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.buy({from: player2, value: web3.utils.toWei('1')}),
-      "CCC: No more to mint"
+      "no more"
     );
 
     balance = await web3.eth.getBalance(player2);
@@ -88,7 +88,7 @@ contract('ERC1155', accounts => {
     await game.revokeRole(minterRole, admin, {from: admin});
     await expectRevert(
       game.mint(player1, 1, amount, datax, {from: admin}),
-      "CCC: must have minter role to mint"
+      "minter only"
     );
   })
 
@@ -103,7 +103,6 @@ contract('ERC1155', accounts => {
     for (let i = 0; i < 20; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('1')});
       await time.increase(10);
-      testValue = await game.testValue();
       // console.log(testValue.toNumber());
     }
 
@@ -133,7 +132,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.buy({from: player1, value: web3.utils.toWei('1')}),
-      "CCC: No more to mint"
+      "no more"
     );
 
     for (let i = 10; i < 30; i ++) {
@@ -147,7 +146,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.buy({from: player1, value: web3.utils.toWei('1')}),
-      "CCC: No more to mint"
+      "no more"
     );
 
   })
@@ -164,7 +163,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.buy({from: player1, value: web3.utils.toWei('0.001')}),
-      "CCC: No more to mint"
+      "no more"
     );
 
     await game.setAvailableCoins([5,6]);
@@ -210,7 +209,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.buy({from: player1, value: web3.utils.toWei('0.5')}),
-      "CCC: Not enough ETH"
+      "not enough"
     );
   })
 
@@ -273,7 +272,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.redeemTokens(10, {from: player2}),
-      "CCC: must have token"
+      "owner only"
     );
 
     value = await cct.balanceOf(player1);
@@ -319,7 +318,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.changeScore(10, 100, true, web3.utils.toWei('100000000')),
-      "CCC: amount needs to be clamped"
+      'wrong amount'
     );
   })
 
@@ -348,6 +347,30 @@ contract('ERC1155', accounts => {
     );
 
   })
+
+  it('should grant GM role to player1 and change score', async () => {
+    await game.setAvailableCoin(1);
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, player1);
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+
+    let count = 0;
+    while(count < 20) {
+      await game.changeScore(10, 0, false, web3.utils.toWei('200'), {from: player1});
+      await time.increase(1);
+      count++;
+    }
+
+    await expectRevert(
+      game.changeScore(10, 0, false, web3.utils.toWei('200'), {from: player2}),
+      'gm only'
+    );
+
+    let value = await game.winnerFunds();
+    console.log(value.toString());
+
+  })
+
 
   it('should increase winnerFund and redeem', async () => {
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
@@ -428,7 +451,7 @@ contract('ERC1155', accounts => {
 
     await expectRevert(
       game.redeemWinnerFunds(10, {from: player1}),
-      'CCC: not enough funds'
+      'no funds'
     );
 
     // value = await cct.balanceOf(player1);
@@ -441,7 +464,7 @@ contract('ERC1155', accounts => {
     // console.log('game balance', balance.toString());
   })
 
-  it.only('should update multiplier', async () => {
+  it('should update multiplier', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
     await game.setAvailableCoin(1);

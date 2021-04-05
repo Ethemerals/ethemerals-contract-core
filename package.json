@@ -16,6 +16,7 @@
     "@openzeppelin/test-helpers": "^0.5.10",
     "@truffle/hdwallet-provider": "^1.2.5",
     "dotenv": "^8.2.0",
-    "firebase-admin": "^9.6.0"
+    "firebase-admin": "^9.6.0",
+    "truffle-contract-size": "^2.0.1"
   }
 }
