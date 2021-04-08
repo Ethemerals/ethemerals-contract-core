@@ -2,6 +2,7 @@ const { expectRevert, time } = require('@openzeppelin/test-helpers');
 const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 const CCT = artifacts.require('CryptoCoinsTokens');
 const Game = artifacts.require('CryptoCoins');
+const GM = artifacts.require('CCGameMaster');
 
 const datax = "0x0";
 
@@ -12,6 +13,7 @@ contract('ERC1155', accounts => {
   beforeEach(async () => {
     cct = await CCT.new("CryptoCoinsTokens", "CCT");
     game = await Game.new('https://d5ianf82isuvq.cloudfront.net/api/meta/', cct.address);
+    gm = await GM.new(game.address);
   });
 
   it('should NOT mint if not admin', async () => {
@@ -194,11 +196,9 @@ contract('ERC1155', accounts => {
     const coin2 = await game.getCoinById(55);
     assert(coin.id == 58);
     assert(coin.score == 300);
-    assert(coin.staked == false);
     assert(coin.rewards == web3.utils.toWei('100'));
     assert(coin2.id == 55);
     assert(coin2.score == 300);
-    assert(coin2.staked == false);
     assert(coin2.rewards == web3.utils.toWei('100'));
   })
 
@@ -312,41 +312,13 @@ contract('ERC1155', accounts => {
     await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
-    await expectRevert.unspecified(
-      game.changeScore(11, 100, true, '0')
-    );
-
     await expectRevert(
-      game.changeScore(10, 100, true, web3.utils.toWei('100000000')),
-      'wrong amount'
-    );
-  })
-
-  it('should set Staked', async () => {
-    // Transfer CCT
-    await cct.transfer(game.address, web3.utils.toWei('100000000'))
-    let value = await cct.balanceOf(game.address);
-    assert(value.toString() === web3.utils.toWei('100000000'))
-
-    await game.setAvailableCoin(1);
-    await game.buy({from: player1, value: web3.utils.toWei('1')});
-
-    let token = await game.getCoinById(10);
-    assert(token.staked == false);
-
-    await game.setStaked(10, true);
-    token = await game.getCoinById(10);
-    assert(token.staked == true);
-
-    await game.setStaked(10, false);
-    token = await game.getCoinById(10);
-    assert(token.staked == false);
-
-    await expectRevert.unspecified(
-      game.setStaked(11, true)
+      game.changeScore(10, 100, true, '0', {from: player1}),
+      'gm only'
     );
 
   })
+
 
   it('should grant GM role to player1 and change score', async () => {
     await game.setAvailableCoin(1);
@@ -392,7 +364,8 @@ contract('ERC1155', accounts => {
     await game.redeemWinnerFunds(10, {from: player1});
     balance = await cct.balanceOf(player1);
     console.log(balance.toString());
-    assert(web3.utils.fromWei(balance.toString()) == '84')
+
+    assert(web3.utils.fromWei(balance.toString()) == '128')
 
   })
 
@@ -444,7 +417,7 @@ contract('ERC1155', accounts => {
 
     value = await game.winnerFunds();
     console.log('winner funds', value.toString());
-    assert(value.toString() == web3.utils.toWei('84'))
+    assert(value.toString() == web3.utils.toWei('128'))
     balance = await cct.balanceOf(game.address);
     // console.log('game balance', balance.toString());
 
@@ -480,7 +453,7 @@ contract('ERC1155', accounts => {
     }
 
     value = await game.winnerMult();
-    assert(value.toString() == '8');
+    assert(value.toString() == '10');
 
     value = await game.winnerFunds();
     await game.redeemWinnerFunds(10, {from: player1});
@@ -497,25 +470,306 @@ contract('ERC1155', accounts => {
       count++;
     }
     value = await game.winnerMult();
-    assert(value.toString() == '6');
+    assert(value.toString() == '10');
 
   })
 
-  // it.only('should Mint 1000 tokens', async () => {
+  it('should create stake and cancel stake, owner only', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, gm.address);
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+
+    let balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 1);
+
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+    await gm.createStake(10, 1, 100, true, {from: player1});
+
+    balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 0);
+
+    balance = await game.balanceOf(gm.address, 10);
+    assert(balance.toNumber() === 1);
+
+    await expectRevert(
+      gm.createStake(10, 1, 100, true, {from: player2}),
+      'ERC1155: caller is not owner nor approved'
+    );
+
+    await gm.createStake(12, 1, 100, true, {from: player1});
+
+    balance = await game.balanceOf(player1, 12);
+    assert(balance.toNumber() === 0);
+
+    balance = await game.balanceOf(gm.address, 12);
+    console.log('balance gm', balance.toString())
+    assert(balance.toNumber() === 1);
+
+    await expectRevert(
+      gm.cancelStake(12, {from: player2}),
+      'only owner'
+    );
+
+    await gm.cancelStake(12, {from: player1}),
+
+    balance = await game.balanceOf(player1, 12);
+    assert(balance.toNumber() === 1);
+
+    balance = await game.balanceOf(gm.address, 12);
+    console.log('balance gm', balance.toString())
+    assert(balance.toNumber() === 0);
+
+  })
+
+  it('should set GM values and ownership', async () => {
+    let value = await gm.angelScoreReward();
+    assert(value.toString() === '25');
+    value = await gm.angelTokenReward();
+    assert(value.toString() === '10');
+    await gm.setAngelReaperRewards(50, 50, 50);
+
+    value = await gm.angelScoreReward();
+    assert(value.toString() === '50');
+    value = await gm.angelTokenReward();
+    assert(value.toString() === '50');
+
+    await gm.transferOwnership(player1);
+    await gm.setAngelReaperRewards(100, 100, 100, {from: player1});
+    value = await gm.angelScoreReward();
+    assert(value.toString() === '100');
+    value = await gm.angelTokenReward();
+    assert(value.toString() === '100');
+    value = await gm.reaperScorePenalty();
+    assert(value.toString() === '100');
+
+    await expectRevert(
+      gm.setAngelReaperRewards(10, 11, 100, {from: player2}),
+      'admin only'
+    );
+  })
+
+  it('should stake and unstake and get bps', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, gm.address);
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+
+    let balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 1);
+
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+
+    const printTestValue = (testValue) => {
+      console.log('--------------------------------');
+      console.log('id', testValue.id.toString());
+      console.log('priceStart', testValue.priceStart.toString());
+      console.log('priceEnd', testValue.priceEnd.toString());
+      console.log('position', testValue.position.toString());
+      console.log('win', testValue.win.toString());
+      console.log('bps', testValue.bps.toString());
+      console.log('scoreChange', testValue.scoreChange.toString());
+      console.log('long', testValue.long.toString());
+      console.log('--------------------------------');
+    }
+
+    const reviveToken = async (token) => {
+
+    }
+
+    let testValue;
+    let token;
+    let stake;
+    let winnerMult;
+    let winMultCRate;
+    let winnerFunds;
+    let leverage = 1;
+
+
+    for (let i = 0; i < 40; i ++) {
+      if(i > 10) {
+        leverage = 10;
+      }
+      if(i > 20) {
+        leverage = 20;
+      }
+      if(i > 30) {
+        leverage = 50;
+      }
+
+      await gm.createStake(10, 1, 100 * leverage, (Math.random() > 0.5), {from: player1});
+      await time.increase(10);
+      token = await game.getCoinById(10);
+      stake = await gm.getStake(10);
+
+      await gm.cancelStakeMOCK(10, {from: player1});
+      testValue = await gm.testValue();
+      testValue.id = i;
+      // printTestValue(testValue);
+
+
+      token = await game.getCoinById(10);
+      console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+
+      winMultCRate = await game.winMultCRate();
+      winnerMult = await game.winnerMult();
+      winnerFunds = await game.winnerFunds();
+      // console.log(`winMultCRate: ${winMultCRate.toString()}, winnerMult: ${winnerMult}, winnerFunds: ${winnerFunds}`);
+    }
+
+  })
+
+  it('should stake and get revived', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, gm.address);
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+    await game.buy({from: admin, value: web3.utils.toWei('1')});
+
+    let balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 1);
+
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+
+    leverage = 50;
+    await gm.createStake(10, 1, 100, true, {from: player1});
+    await expectRevert(
+      gm.reviveToken(10, 11, {from: player2}),
+      'not dead'
+    );
+
+    await expectRevert(
+      gm.reviveToken(10, 12, {from: player2}),
+      'only owner'
+    );
+
+    await expectRevert(
+      gm.reviveToken(11, 12, {from: admin}),
+      'only staked'
+    );
+
+    await gm.cancelStakeMOCK(10, {from: player1});
+    token = await game.getCoinById(10);
+    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+
+    await gm.createStake(10, 1, 10000, true, {from: player1});
+
+    console.log('REVIVING');
+    await gm.reviveToken(10, 11, {from: player2})
+    token = await game.getCoinById(11);
+    console.log('ANGEL', token.score.toString(), token.rewards.toString());
+
+    token = await game.getCoinById(10);
+    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+
+  })
+
+  it('should stake and get reaped', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, gm.address);
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+    await game.buy({from: admin, value: web3.utils.toWei('1')});
+
+    let balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 1);
+
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+
+    leverage = 50;
+    await gm.createStake(10, 1, 100, true, {from: player1});
+    await expectRevert(
+      gm.reapToken(10, 11, {from: player2}),
+      'not dead'
+    );
+
+    await expectRevert(
+      gm.reapToken(10, 12, {from: player2}),
+      'only owner'
+    );
+
+    await expectRevert(
+      gm.reapToken(11, 12, {from: admin}),
+      'only staked'
+    );
+
+    await gm.cancelStakeMOCK(10, {from: player1});
+    token = await game.getCoinById(10);
+    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+
+    await gm.createStake(10, 1, 10000, true, {from: player1});
+
+    console.log('REAPING');
+    await gm.reapToken(10, 11, {from: player2})
+    token = await game.getCoinById(11);
+    console.log('REAPER', token.score.toString(), token.rewards.toString());
+
+    balance = await game.balanceOf(player2, 10);
+    assert(balance.toNumber() === 1);
+
+    token = await game.getCoinById(10);
+    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+
+  })
+
+  it('should stake and unstake by admin', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, gm.address);
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+
+    let balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 1);
+
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+
+    await gm.createStake(10, 1, 100, true, {from: player1});
+
+    await expectRevert(
+      gm.cancelStakeAdmin(10, {from: player2}),
+      'admin only'
+    );
+
+    await gm.cancelStakeAdmin(10, {from: admin});
+
+    balance = await game.balanceOf(player1, 10);
+    assert(balance.toNumber() === 1);
+  })
+
+
+
+  // it('should Mint 1000 tokens', async () => {
 
   //   let coinClass = [];
   //   for(let i = 1; i < 101; i ++) {
   //     coinClass.push(i);
   //   }
   //   await game.setAvailableCoins(coinClass);
-  //   await game.setMintPrice(web3.utils.toWei('0.01'));
+  //   await game.setMintPrice(web3.utils.toWei('0.001'));
   //   let availableCoins = await game.getAvailableCoins();
   //   console.log('availableCoins', availableCoins.toString())
 
   //   let testValue;
 
   //   for (let i = 0; i < 1000; i ++) {
-  //     await game.buy({from: player1, value: web3.utils.toWei('0.01')});
+  //     await game.buy({from: player2, value: web3.utils.toWei('0.01')});
   //     await time.increase(10);
   //     // testValue = await game.testValue();
   //     // console.log(testValue.toNumber());
@@ -525,7 +779,7 @@ contract('ERC1155', accounts => {
   //   console.log('availableCoins', availableCoins.toString())
 
   //   for (let i = 10; i < 1010; i ++) {
-  //     let balance = await game.balanceOf(player1, i);
+  //     let balance = await game.balanceOf(player2, i);
   //     assert(balance.toNumber() === 1);
   //   }
   // })
