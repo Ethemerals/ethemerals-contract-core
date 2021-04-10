@@ -4,8 +4,8 @@ pragma solidity 0.8.3;
 
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
-// import "../openzep/token/ERC1155/IERC1155.sol";
 import "../openzep/token/ERC1155/utils/ERC1155Holder.sol";
+// 0x19f8b90D0448dad99D0968545e87651a96F699F6
 
 interface IERC1155 {
   function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
@@ -62,17 +62,17 @@ contract CCGameMaster is ERC1155Holder {
     mapping (uint => AggregatorV3Interface) private priceFeeds;
 
     // MOCK
-    uint[] prices;
-    struct Test {
-      uint priceStart;
-      uint priceEnd;
-      uint position;
-      uint bps;
-      uint scoreChange;
-      bool win;
-      bool long;
-    }
-    Test public testValue;
+    // uint[] prices;
+    // struct Test {
+    //   uint priceStart;
+    //   uint priceEnd;
+    //   uint position;
+    //   uint bps;
+    //   uint scoreChange;
+    //   bool win;
+    //   bool long;
+    // }
+    // Test public testValue;
 
     /**
      * Network: Kovan
@@ -90,33 +90,33 @@ contract CCGameMaster is ERC1155Holder {
       emit OwnershipTransferred(address(0), admin);
 
       // MOCK
-      uint ethusd = 191022979575;
-      uint add = 6022979575;
-      for(uint i = 0; i < 30; i ++) {
-        uint _add = add * i;
-        prices.push(ethusd + _add);
-      }
+    //   uint ethusd = 191022979575;
+    //   uint add = 6022979575;
+    //   for(uint i = 0; i < 30; i ++) {
+    //     uint _add = add * i;
+    //     prices.push(ethusd + _add);
+    //   }
     }
 
 
-    // function getPrice(uint _id) public view returns (uint) {
-    //     (uint80 roundID, int price, uint startedAt, uint timeStamp, uint80 answeredInRound) = priceFeeds[_id].latestRoundData();
-    //     return uint(price);
-    // }
+    function getPrice(uint _id) public view returns (uint) {
+        (uint80 roundID, int price, uint startedAt, uint timeStamp, uint80 answeredInRound) = priceFeeds[_id].latestRoundData();
+        return uint(price);
+    }
 
-    // function getDecimals(uint _id) public view returns (uint8) {
-    //     return priceFeeds[_id].decimals();
-    // }
+    function getDecimals(uint _id) public view returns (uint8) {
+        return priceFeeds[_id].decimals();
+    }
 
     // MOCK
-    function getPrice(uint _id) public view returns (uint) {
-      uint rand = _random(30);
-      return prices[rand];
-    }
+    // function getPrice(uint _id) public view returns (uint) {
+    //   uint rand = _random(30);
+    //   return prices[rand];
+    // }
 
-    function getDecimals(uint _id) public pure returns (uint8) {
-      return 8;
-    }
+    // function getDecimals(uint _id) public pure returns (uint8) {
+    //   return 8;
+    // }
 
     function createStake(uint _tokenId, uint _priceFeedId, uint _position, bool long) external {
       IERC1155(nftAddress).safeTransferFrom(msg.sender, address(this), _tokenId, 1, '');
@@ -158,8 +158,8 @@ contract CCGameMaster is ERC1155Holder {
 
     function _isDead(uint _tokenId, uint threshold) internal view returns (bool, uint) {
       Stake storage _stake = stakes[_tokenId];
-      // uint priceEnd = getPrice(_stake.priceFeedId);
-      uint priceEnd = 191022979575; // MOCK
+       uint priceEnd = getPrice(_stake.priceFeedId);
+    //   uint priceEnd = 191022979575; // MOCK
       uint change = _stake.position * calcBps(_stake.startingPrice, priceEnd) / 10000;
       bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
       uint scoreBefore = IERC1155(nftAddress).getCoinScore(_tokenId);
@@ -182,27 +182,27 @@ contract CCGameMaster is ERC1155Holder {
     }
 
     // MOCK
-    function cancelStakeMOCK(uint _tokenId) external {
-      require(stakes[_tokenId].owner == msg.sender, 'only owner');
-      require(IERC1155(nftAddress).balanceOf(address(this), _tokenId) > 0, 'only staked');
-      Stake storage _stake = stakes[_tokenId];
-      uint priceStart = _stake.startingPrice;
-      uint priceEnd = getPrice(_stake.priceFeedId);
-      uint bps = calcBps(priceStart, priceEnd);
-      uint change = _stake.position * bps / 10000;
-      bool win = _stake.long ? priceStart < priceEnd : priceStart > priceEnd;
+    // function cancelStakeMOCK(uint _tokenId) external {
+    //   require(stakes[_tokenId].owner == msg.sender, 'only owner');
+    //   require(IERC1155(nftAddress).balanceOf(address(this), _tokenId) > 0, 'only staked');
+    //   Stake storage _stake = stakes[_tokenId];
+    //   uint priceStart = _stake.startingPrice;
+    //   uint priceEnd = getPrice(_stake.priceFeedId);
+    //   uint bps = calcBps(priceStart, priceEnd);
+    //   uint change = _stake.position * bps / 10000;
+    //   bool win = _stake.long ? priceStart < priceEnd : priceStart > priceEnd;
 
-      testValue.bps = bps;
-      testValue.priceStart = priceStart;
-      testValue.priceEnd = priceEnd;
-      testValue.position = _stake.position;
-      testValue.win = win;
-      testValue.scoreChange = change;
-      testValue.long = _stake.long;
+    //   testValue.bps = bps;
+    //   testValue.priceStart = priceStart;
+    //   testValue.priceEnd = priceEnd;
+    //   testValue.position = _stake.position;
+    //   testValue.win = win;
+    //   testValue.scoreChange = change;
+    //   testValue.long = _stake.long;
 
-      IERC1155(nftAddress).changeScore(_tokenId, change, win, win ? change * 10**18 : 10**18);
-      IERC1155(nftAddress).safeTransferFrom(address(this), _stake.owner, _tokenId, 1, '');
-    }
+    //   IERC1155(nftAddress).changeScore(_tokenId, change, win, win ? change * 10**18 : 10**18);
+    //   IERC1155(nftAddress).safeTransferFrom(address(this), _stake.owner, _tokenId, 1, '');
+    // }
 
     function getStake(uint _id) external view returns (Stake memory) {
       return stakes[_id];
