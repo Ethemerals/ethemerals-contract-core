@@ -139,7 +139,7 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
           nonce++;
           uint _tokenId = availableCoins[randCoinClass] * 10 + edition;
           _mint(to, _tokenId, 1, "");
-          coinEditions[availableCoins[randCoinClass]].push(Coin(_tokenId, 300, 100000000000000000000));
+          coinEditions[availableCoins[randCoinClass]].push(Coin(_tokenId, 300, 1000000000000000000000));
           return;
         } else {
           // no more editions
@@ -182,7 +182,7 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
         }
       }
       tokenCurrent.score = newScore;
-      tokenCurrent.rewards += amount > 10000000000000000000000 ? 10000000000000000000000 : amount;
+      tokenCurrent.rewards += amount > 1000000000000000000000 ? 1000000000000000000000 : amount;
 
       if(winningCoin == 0) {
         winningCoin = tokenCurrent.id;

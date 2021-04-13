@@ -14,218 +14,107 @@ interface IERC1155 {
   function getCoinScore(uint _tokenId) external view returns (uint256);
 }
 
-interface AggregatorV3Interface {
-
-  function decimals()
-    external
-    view
-    returns (
-      uint8
-    );
-
-  function latestRoundData() external view returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
+interface IPriceFeed {
+  function getPrice(uint _id) external view returns (uint);
 }
 
 contract CCGameMaster is ERC1155Holder {
 
-    event StakeCreated (uint indexed tokenId, address indexed owner, uint indexed priceFeedId);
-    event TokenRevived (uint indexed tokenId, address indexed angelOwner, uint indexed angel);
-    event TokenExecuted (uint indexed tokenId, address indexed reaperOwner, uint indexed reaper);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    struct Stake {
-        address owner;
-        uint priceFeedId;
-        uint startingPrice;
-        uint position;
-        bool long;
-    }
-
-    address admin;
-    address nftAddress;
-
-    uint public angelScoreReward = 25;
-    uint public angelTokenReward = 10;
-    uint public reaperScorePenalty = 50;
-
-    // mapping tokenId to stake;
-    mapping (uint => Stake) private stakes;
-    // mapping (address => mapping (uint => uint[])) private stakes;
-
-    // mapping uint price to Aggregator
-    mapping (uint => AggregatorV3Interface) private priceFeeds;
-
-    // MOCK
-    // uint[] prices;
-    // struct Test {
-    //   uint priceStart;
-    //   uint priceEnd;
-    //   uint position;
-    //   uint bps;
-    //   uint scoreChange;
-    //   bool win;
-    //   bool long;
-    // }
-    // Test public testValue;
-
-    /**
-     * Network: Kovan
-     */
-    constructor(address _nftAddress) {
-      admin = msg.sender;
-      nftAddress = _nftAddress;
-      priceFeeds[0] = AggregatorV3Interface(0x6135b13325bfC4B00278B4abC5e20bbce2D6580e); // BTCUSD 8
-      priceFeeds[1] = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331); // ETHUSD 8
-      priceFeeds[2] = AggregatorV3Interface(0xF7904a295A029a3aBDFFB6F12755974a958C7C25); // BTCETH 18
-      priceFeeds[3] = AggregatorV3Interface(0x8993ED705cdf5e84D0a3B754b5Ee0e1783fcdF16); // BNBUSD 8
-      // priceFeeds[4] = AggregatorV3Interface(0x3eA2b7e3ed9EA9120c3d6699240d1ff2184AC8b3); // XRPUSD 8
-      // priceFeeds[5] = AggregatorV3Interface(0x17756515f112429471F86f98D5052aCB6C47f6ee); // UNIETH 18
-
-      emit OwnershipTransferred(address(0), admin);
-
-      // MOCK
-    //   uint ethusd = 191022979575;
-    //   uint add = 6022979575;
-    //   for(uint i = 0; i < 30; i ++) {
-    //     uint _add = add * i;
-    //     prices.push(ethusd + _add);
-    //   }
-    }
+  event StakeCreated (uint indexed tokenId, address owner, uint priceFeedId);
+  event StakeCanceled (uint indexed tokenId, address owner, uint priceFeedId);
+  event TokenRevived (uint indexed tokenId, bool indexed reap, address reviverOwner, uint reviver);
+  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
 
-    function getPrice(uint _id) public view returns (uint) {
-        (uint80 roundID, int price, uint startedAt, uint timeStamp, uint80 answeredInRound) = priceFeeds[_id].latestRoundData();
-        return uint(price);
-    }
+  struct Stake {
+    address owner;
+    uint priceFeedId;
+    uint startingPrice;
+    uint position;
+    bool long;
+  }
 
-    function getDecimals(uint _id) public view returns (uint8) {
-        return priceFeeds[_id].decimals();
-    }
+  address admin;
+  IERC1155 nftContract;
+  IPriceFeed priceFeed;
 
-    // MOCK
-    // function getPrice(uint _id) public view returns (uint) {
-    //   uint rand = _random(30);
-    //   return prices[rand];
-    // }
+  uint public reviverScorePenalty = 25;
+  uint public reviverTokenReward = 10;
 
-    // function getDecimals(uint _id) public pure returns (uint8) {
-    //   return 8;
-    // }
+  // mapping tokenId to stake;
+  mapping (uint => Stake) private stakes;
 
-    function createStake(uint _tokenId, uint _priceFeedId, uint _position, bool long) external {
-      IERC1155(nftAddress).safeTransferFrom(msg.sender, address(this), _tokenId, 1, '');
-      stakes[_tokenId] = Stake(msg.sender, _priceFeedId, getPrice(_priceFeedId), _position, long);
-      emit StakeCreated(_tokenId, msg.sender, _priceFeedId);
-    }
+  constructor(address _nftAddress, address _priceFeedAddress) {
+    admin = msg.sender;
+    nftContract = IERC1155(_nftAddress);
+    priceFeed = IPriceFeed(_priceFeedAddress);
+  }
 
-    function cancelStake(uint _tokenId) external {
-      require(stakes[_tokenId].owner == msg.sender, 'only owner');
-      require(IERC1155(nftAddress).balanceOf(address(this), _tokenId) > 0, 'only staked');
-      Stake storage _stake = stakes[_tokenId];
-      uint priceEnd = getPrice(_stake.priceFeedId);
-      uint change = _stake.position * calcBps(_stake.startingPrice, priceEnd) / 10000;
-      bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
+  function createStake(uint _tokenId, uint _priceFeedId, uint _position, bool long) external {
+    nftContract.safeTransferFrom(msg.sender, address(this), _tokenId, 1, '');
+    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _position, long);
+    emit StakeCreated(_tokenId, msg.sender, _priceFeedId);
+  }
 
-      IERC1155(nftAddress).changeScore(_tokenId, change, win, win ? change * 10**18 : 10**18);
-      IERC1155(nftAddress).safeTransferFrom(address(this), _stake.owner, _tokenId, 1, '');
-    }
+  function cancelStake(uint _id) external {
+    require(stakes[_id].owner == msg.sender, 'only owner');
+    require(nftContract.balanceOf(address(this), _id) > 0, 'only staked');
+    (uint change, bool win) = getChange(_id);
+    nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id, 1, '');
+    nftContract.changeScore(_id, change, win, win ? change * 10**18 : 10**18);
+    emit StakeCanceled(_id, msg.sender, stakes[_id].priceFeedId);
+  }
 
-    function reviveToken(uint _tokenId, uint angelId) external {
-      require(IERC1155(nftAddress).balanceOf(msg.sender, angelId) > 0, 'only owner');
-      require(IERC1155(nftAddress).balanceOf(address(this), _tokenId) > 0, 'only staked');
-      (bool dead, uint scoreBefore) = _isDead(_tokenId, 50);
-      require(dead, 'not dead');
-      IERC1155(nftAddress).changeScore(_tokenId, scoreBefore - 50, false, 10**18); // revive with 50
-      IERC1155(nftAddress).changeScore(angelId, angelScoreReward, true, angelTokenReward * 10**18); // get 50 points + rewards tokens
-      IERC1155(nftAddress).safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId, 1, '');
-    }
+  function reviveToken(uint _id0, uint _id1, bool reap) external {
+    require(nftContract.balanceOf(msg.sender, _id1) > 0, 'only owner');
+    require(nftContract.balanceOf(address(this), _id0) > 0, 'only staked');
+    (uint change, bool win) = getChange(_id0);
+    uint scoreBefore = nftContract.getCoinScore(_id0);
+    require((win != true && scoreBefore <= (change + 20)), 'not dead');
+    nftContract.safeTransferFrom(address(this), reap ? msg.sender : stakes[_id0].owner, _id0, 1, ''); // take owne0rship or return ownership
+    nftContract.changeScore(_id0, scoreBefore - 50, false, 10**18); // revive with 50
+    nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? 10**18 : reviverTokenReward * 10**18); // reaper minus 2x points and add rewards
+    emit TokenRevived(_id0, reap, msg.sender, _id1);
+  }
 
-    function reapToken(uint _tokenId, uint reaperId) external {
-      require(IERC1155(nftAddress).balanceOf(msg.sender, reaperId) > 0, 'only owner');
-      require(IERC1155(nftAddress).balanceOf(address(this), _tokenId) > 0, 'only staked');
-      (bool dead, uint scoreBefore) = _isDead(_tokenId, 5);
-      require(dead, 'not dead');
-      IERC1155(nftAddress).changeScore(_tokenId, scoreBefore - 50, false, 10**18); // revive with 50
-      IERC1155(nftAddress).changeScore(reaperId, reaperScorePenalty, false, 10**18); // -50 points
-      IERC1155(nftAddress).safeTransferFrom(address(this), msg.sender, _tokenId, 1, ''); // take ownership
-    }
+  function getChange(uint _tokenId) public view returns (uint, bool) {
+    Stake storage _stake = stakes[_tokenId];
+    uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
+    uint change = _stake.position * calcBps(_stake.startingPrice, priceEnd) / 10000;
+    bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
+    return (change, win);
+  }
 
-    function _isDead(uint _tokenId, uint threshold) internal view returns (bool, uint) {
-      Stake storage _stake = stakes[_tokenId];
-       uint priceEnd = getPrice(_stake.priceFeedId);
-    //   uint priceEnd = 191022979575; // MOCK
-      uint change = _stake.position * calcBps(_stake.startingPrice, priceEnd) / 10000;
-      bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
-      uint scoreBefore = IERC1155(nftAddress).getCoinScore(_tokenId);
-      return ((win != true && scoreBefore <= (change + threshold)), scoreBefore);
-    }
+  function calcBps(uint x, uint y) public pure returns (uint) {
+    uint _x = x > 10**12 ? x / 10**8 : x;
+    uint _y = y > 10**12 ? y / 10**8: y;
+    return _x > _y ? (_x - _y) * 10000 / _x : (_y - _x) * 10000 / _y ;
+  }
 
-    function calcBps(uint x, uint y) public pure returns (uint) {
-        uint _x = x > 10**12 ? x / 10**8 : x;
-        uint _y = y > 10**12 ? y / 10**8: y;
-        return _x > _y ? (_x - _y) * 10000 / _x : (_y - _x) * 10000 / _y ;
-    }
+  function _random(uint max) internal view returns(uint) {
+    return uint(keccak256(abi.encodePacked(block.number, block.timestamp, block.difficulty, msg.sender))) % max;
+  }
 
-    function _random(uint max) internal view returns(uint) {
-      return uint(keccak256(abi.encodePacked(block.number, block.timestamp, block.difficulty, msg.sender))) % max;
-    }
+  function getStake(uint _id) external view returns (Stake memory) {
+    return stakes[_id];
+  }
 
-    function cancelStakeAdmin(uint _tokenId) external {
-      require(msg.sender == admin, 'admin only');
-      IERC1155(nftAddress).safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId, 1, '');
-    }
+  function cancelStakeAdmin(uint _id) external {
+    require(msg.sender == admin, 'admin only');
+    nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id, 1, '');
+    emit StakeCanceled(_id, stakes[_id].owner, stakes[_id].priceFeedId);
+  }
 
-    // MOCK
-    // function cancelStakeMOCK(uint _tokenId) external {
-    //   require(stakes[_tokenId].owner == msg.sender, 'only owner');
-    //   require(IERC1155(nftAddress).balanceOf(address(this), _tokenId) > 0, 'only staked');
-    //   Stake storage _stake = stakes[_tokenId];
-    //   uint priceStart = _stake.startingPrice;
-    //   uint priceEnd = getPrice(_stake.priceFeedId);
-    //   uint bps = calcBps(priceStart, priceEnd);
-    //   uint change = _stake.position * bps / 10000;
-    //   bool win = _stake.long ? priceStart < priceEnd : priceStart > priceEnd;
+  function setReviverRewards(uint _score, uint _token) external {
+    require(msg.sender == admin, 'admin only');
+    reviverScorePenalty = _score;
+    reviverTokenReward = _token;
+  }
 
-    //   testValue.bps = bps;
-    //   testValue.priceStart = priceStart;
-    //   testValue.priceEnd = priceEnd;
-    //   testValue.position = _stake.position;
-    //   testValue.win = win;
-    //   testValue.scoreChange = change;
-    //   testValue.long = _stake.long;
-
-    //   IERC1155(nftAddress).changeScore(_tokenId, change, win, win ? change * 10**18 : 10**18);
-    //   IERC1155(nftAddress).safeTransferFrom(address(this), _stake.owner, _tokenId, 1, '');
-    // }
-
-    function getStake(uint _id) external view returns (Stake memory) {
-      return stakes[_id];
-    }
-
-    function addFeed(uint _id, address _proxy) external {
-        require(msg.sender == admin, 'admin only');
-        priceFeeds[_id] = AggregatorV3Interface(_proxy);
-    }
-
-    function setAngelReaperRewards(uint revive, uint _token, uint reap) external {
-      require(msg.sender == admin, 'admin only');
-      angelScoreReward = revive;
-      angelTokenReward = _token;
-      reaperScorePenalty = reap;
-    }
-
-    function transferOwnership(address newAdmin) external {
-      require(msg.sender == admin, 'admin only');
-      emit OwnershipTransferred(admin, newAdmin);
-      admin = newAdmin;
-    }
-
-
+  function transferOwnership(address newAdmin) external {
+    require(msg.sender == admin, 'admin only');
+    emit OwnershipTransferred(admin, newAdmin);
+    admin = newAdmin;
+  }
 
 }

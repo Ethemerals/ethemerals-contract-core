@@ -42,7 +42,7 @@ contract PriceFeed {
         priceFeeds[_id] = PricePair(_token0, _token1, _amount);
     }
 
-    function updatedUniswap(address uniswapAddress) external {
+    function updateUniswap(address uniswapAddress) external {
         require(msg.sender == admin, 'admin only');
         uniswap = IUniswapV2Router01(uniswapAddress);
     }
