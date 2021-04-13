@@ -20,9 +20,9 @@ interface IPriceFeed {
 
 contract CCGameMaster is ERC1155Holder {
 
-  event StakeCreated (uint indexed tokenId, address owner, uint priceFeedId);
-  event StakeCanceled (uint indexed tokenId, address owner, uint priceFeedId);
-  event TokenRevived (uint indexed tokenId, bool indexed reap, address reviverOwner, uint reviver);
+  event StakeCreated (uint indexed tokenId, address indexed owner, uint priceFeedId);
+  event StakeCanceled (uint indexed tokenId, address indexed owner, uint priceFeedId);
+  event TokenRevived (uint indexed tokenId, bool indexed reap, address indexed reviverOwner, uint reviver);
   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
 
@@ -89,10 +89,6 @@ contract CCGameMaster is ERC1155Holder {
     uint _x = x > 10**12 ? x / 10**8 : x;
     uint _y = y > 10**12 ? y / 10**8: y;
     return _x > _y ? (_x - _y) * 10000 / _x : (_y - _x) * 10000 / _y ;
-  }
-
-  function _random(uint max) internal view returns(uint) {
-    return uint(keccak256(abi.encodePacked(block.number, block.timestamp, block.difficulty, msg.sender))) % max;
   }
 
   function getStake(uint _id) external view returns (Stake memory) {

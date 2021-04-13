@@ -115,7 +115,7 @@ contract('ERC1155', accounts => {
     assert(newBalance < balance);
   })
 
-  it.only('should set MintPrice and buy at discount', async () => {
+  it('should set MintPrice and buy at discount', async () => {
 
     await game.setAvailableCoin(1);
     await game.buy({from: player2, value: web3.utils.toWei('1')});
@@ -271,6 +271,8 @@ contract('ERC1155', accounts => {
   // TODO
   it('should Update token score', async () => {
 
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, admin);
     await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
@@ -338,6 +340,8 @@ contract('ERC1155', accounts => {
 
   it('should add rewards tokens to NFT token', async () => {
     // Transfer CCT
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, admin);
     await cct.transfer(game.address, web3.utils.toWei('100000000'))
     let value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
@@ -400,6 +404,8 @@ contract('ERC1155', accounts => {
 
 
   it('should increase winnerFund and redeem', async () => {
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, admin);
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
     let balance = await cct.balanceOf(game.address);
 
@@ -425,6 +431,8 @@ contract('ERC1155', accounts => {
   })
 
   it('should update winning coin and redeem', async () => {
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, admin);
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
 
     await game.setAvailableCoin(1);
@@ -450,6 +458,8 @@ contract('ERC1155', accounts => {
   })
 
   it('should keep scoring even without funds', async () => {
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, admin);
     await cct.transfer(game.address, web3.utils.toWei('20'));
     let balance = await cct.balanceOf(game.address);
     // console.log('game balance', balance.toString());
@@ -493,6 +503,8 @@ contract('ERC1155', accounts => {
   })
 
   it('should update multiplier', async () => {
+    const gmRole = web3.utils.soliditySha3("GM_ROLE");
+    await game.grantRole(gmRole, admin);
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
     await game.setAvailableCoin(1);
@@ -655,10 +667,6 @@ contract('ERC1155', accounts => {
       token = await game.getCoinById(10);
       console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
 
-      winMultCRate = await game.winMultCRate();
-      winnerMult = await game.winnerMult();
-      winnerFunds = await game.winnerFunds();
-      console.log(`winMultCRate: ${winMultCRate.toString()}, winnerMult: ${winnerMult}, winnerFunds: ${winnerFunds}`);
     }
 
   })
@@ -684,10 +692,10 @@ contract('ERC1155', accounts => {
     token = await game.getCoinById(10);
     console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
 
-    await updatePriceHigh();
-    await gm.createStake(10, 1, 10000, true, {from: player1});
+    await updatePriceCustom(10000);
+    await gm.createStake(10, 1, 100000, true, {from: player1});
 
-    await updatePriceLow();
+    await updatePriceCustom(5000);
     console.log('REVIVING');
     await gm.reviveToken(10, 11, false, {from: player2})
     token = await game.getCoinById(11);
@@ -845,7 +853,7 @@ contract('ERC1155', accounts => {
 
 
 
-  // it.only('should Mint 1000 tokens', async () => {
+  // it('should Mint 1000 tokens', async () => {
 
   //   let coinClass = [];
   //   for(let i = 1; i < 101; i ++) {
