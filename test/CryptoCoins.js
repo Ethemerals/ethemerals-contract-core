@@ -115,6 +115,20 @@ contract('ERC1155', accounts => {
     assert(newBalance < balance);
   })
 
+  it.only('should set MintPrice and buy at discount', async () => {
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+
+    balance = await game.balanceOf(player2, 10);
+    assert(balance.toNumber() === 1);
+
+    await game.buy({from: admin, value: web3.utils.toWei('0.75')});
+    balance = await game.balanceOf(admin, 11);
+    assert(balance.toNumber() === 1);
+
+  })
+
   it('should grant Minter role to player1 and mint token', async () => {
 
     await game.setAvailableCoin(1);

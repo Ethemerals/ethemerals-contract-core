@@ -121,7 +121,7 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
 
     // buys a random token from available class
     function buy() payable external {
-      require(msg.value >= mintPrice, "not enough");
+      require(msg.value >= mintPrice || (IERC20(tokenAddress).balanceOf(msg.sender) >= 2000000000000000000000 && msg.value >= (mintPrice - mintPrice/4)), "not enough"); // discount
       _mintAvailableToken(msg.sender);
     }
 
