@@ -38,7 +38,7 @@ contract CCGameMaster is ERC1155Holder {
   IPriceFeed priceFeed;
 
   uint public reviverScorePenalty = 25;
-  uint public reviverTokenReward = 10;
+  uint public reviverTokenReward = 100000000000000000000;
   address private admin;
 
   // mapping tokenId to stake;

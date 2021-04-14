@@ -76,7 +76,7 @@ contract CryptoCoins is ERC1155 {
 
     // buys a random token from available class
     function buy() payable external {
-      require(msg.value >= mintPrice || (IERC20(tokenAddress).balanceOf(msg.sender) >= 2000000000000000000000 && msg.value >= (mintPrice - mintPrice/4)), "not enough"); // discount
+      require(msg.value >= mintPrice || (IERC20(tokenAddress).balanceOf(msg.sender) >= 2000000000000000000000 && msg.value >= (mintPrice - mintPrice/4)), "not enough"); // discount 2000 rewards
       _mintAvailableToken(msg.sender);
     }
 
@@ -93,7 +93,7 @@ contract CryptoCoins is ERC1155 {
         if (edition < 10) {
           uint _tokenId = availableCoins[randCoinClass] * 10 + edition;
           _mint(to, _tokenId, 1, "");
-          coinEditions[availableCoins[randCoinClass]].push(Coin(_tokenId, 300, 1000000000000000000000));
+          coinEditions[availableCoins[randCoinClass]].push(Coin(_tokenId, 300, 1000000000000000000000)); // 1000 rewards
           nonce++;
           return;
         } else {
@@ -142,7 +142,8 @@ contract CryptoCoins is ERC1155 {
         }
       }
       tokenCurrent.score = newScore;
-      tokenCurrent.rewards += amount > 1000000000000000000000 ? 1000000000000000000000 : amount; //Clamp
+      uint amountClamped = amount > 1000000000000000000000 ? 1000000000000000000000 : amount; //Clamp
+      tokenCurrent.rewards += amountClamped;
 
       if(winningCoin == 0) {
         winningCoin = tokenCurrent.id;
@@ -151,14 +152,14 @@ contract CryptoCoins is ERC1155 {
       }
 
       //2%-10% pct sent to winner fund, 200 basis points = 2%
-      if(amount > 1000000000)  { //1 Gwei
+      if(amountClamped > 1000000000)  { //1 Gwei
         winnerMult = winnerMult < 10 ? nonce / 10 + 1 : 10;
-        uint fundAmount = amount * 200 * winnerMult / 10000;
+        uint fundAmount = amountClamped * 200 * winnerMult / 10000;
         winnerFunds += fundAmount;
       }
 
       nonce++;
-      emit ChangeScore(_tokenId, newScore, add, amount);
+      emit ChangeScore(_tokenId, newScore, add, amountClamped);
     }
 
 
