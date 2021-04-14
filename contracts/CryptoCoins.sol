@@ -3,39 +3,24 @@
 pragma solidity 0.8.3;
 
 import "../openzep/token/ERC1155/ERC1155.sol";
-import "../openzep/access/AccessControlEnumerable.sol";
 import "../openzep/token/ERC20/IERC20.sol";
 
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/ERC1155.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControlEnumerable.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
-
 
 //5000000 gas limit
 //"https://cloudfront.net/api/meta/{id}", "0xDc1EC809D4b2b06c4CF369C63615eAeE347D45Ac"
 
 
-/**
- * @dev {ERC1155} token, including:
- *
- *  - a minter role that allows for token minting (creation)
- *
- * This contract uses {AccessControl} to lock permissioned functions using the
- * different roles - head to its documentation for details.
- *
- * The account that deploys the contract will be granted the minter and pauser
- * roles, as well as the default admin role, which will let it grant both minter
- * and pauser roles to other accounts.
- */
-contract CryptoCoins is AccessControlEnumerable, ERC1155 {
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant GM_ROLE = keccak256("GM_ROLE");
+contract CryptoCoins is ERC1155 {
 
-    event AvailableCoins (uint indexed classIdMin, uint indexed classIdMax);
-    event AvailableCoin (uint indexed classId);
-    event MintPrice (uint indexed amount);
     event ChangeScore (uint indexed id, uint indexed score, bool indexed add, uint rewards);
     event RedeemWinnerFunds (address indexed to, uint amount);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event GameMasterAdded(address indexed gm);
+    event GameMasterRemoved(address indexed gm);
+    event MinterAdded(address indexed minter);
+    event MinterRemoved(address indexed minter);
 
     // NFT ID range 1-6969
     // Bosses: 1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -49,38 +34,42 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
       uint rewards;
     }
 
-    // Rewards token address
-    address public tokenAddress;
+    // rewards token address
+    address private tokenAddress;
+    address private admin;
 
     // ranking rewards
     uint private nonce;
+    uint public winnerMult = 1; // TEST PUBLIC
     uint public winnerFunds;
     uint public winningCoin;
-    uint public winnerMult = 1;
     uint public mintPrice = 100000000000000000;
 
     // iterable array of available classes
     uint[] private availableCoins;
 
     // mapping of classes to edition (holds all the classes and editions)
-    mapping (uint => Coin[]) public coinEditions;
+    mapping (uint => Coin[]) private coinEditions;
+    mapping (address => bool) private gameMasters;
+    mapping (address => bool) private minters;
+
 
 
     constructor(string memory uri, address _tokenAddress) ERC1155(uri) {
-      _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-      _setupRole(MINTER_ROLE, msg.sender);
+      admin = msg.sender;
+      minters[msg.sender] = true;
       tokenAddress = _tokenAddress;
     }
 
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) public virtual {
-      require(hasRole(MINTER_ROLE, msg.sender), "minter only");
+      require(minters[msg.sender] == true, "minter only");
       _mint(to, id, amount, data);
     }
 
 
     function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public virtual {
-      require(hasRole(MINTER_ROLE, msg.sender), "minter only");
+      require(minters[msg.sender] == true, "minter only");
       _mintBatch(to, ids, amounts, data);
     }
 
@@ -92,7 +81,7 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
     }
 
 
-    function _mintAvailableToken(address to) internal {
+    function _mintAvailableToken(address to) private {
       require(availableCoins.length > 0, "no more");
       uint randCoinClass;
       uint edition;
@@ -117,7 +106,7 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
     }
 
 
-    function _reduceAvailableCoins(uint coinToRemove) internal {
+    function _reduceAvailableCoins(uint coinToRemove) private {
       uint[] memory newAvailableCoins = new uint[](availableCoins.length - 1);
       uint j;
       for(uint i = 0; i < availableCoins.length; i ++) {
@@ -129,13 +118,15 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
       availableCoins = newAvailableCoins;
     }
 
-    function _random(uint max) internal view returns(uint) {
+
+    function _random(uint max) private view returns(uint) {
       return uint(keccak256(abi.encodePacked(nonce, block.number, block.difficulty, msg.sender))) % max;
     }
 
+
     //Require GAMEMASTER
     function changeScore(uint _tokenId, uint offset, bool add, uint amount) external {
-      require(hasRole(GM_ROLE, msg.sender), "gm only");
+      require(gameMasters[msg.sender] == true, "gm only");
       Coin storage tokenCurrent = coinEditions[_tokenId / 10][_tokenId % 10];
 
       uint _score = tokenCurrent.score;
@@ -195,25 +186,43 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
 
     function setAvailableCoin(uint _id) external onlyAdmin() { //admin
       availableCoins.push(_id);
-      emit AvailableCoin(_id);
     }
 
 
     function setAvailableCoins(uint[] memory _ids ) external onlyAdmin() { //admin
       availableCoins = _ids;
-      emit AvailableCoins(_ids[0], _ids[_ids.length-1]);
     }
 
 
     function setMintPrice(uint _price) external onlyAdmin() { //admin
       mintPrice = _price;
-      emit MintPrice(_price);
     }
 
 
-    function withdraw(address payable to, uint amount) external onlyAdmin() { //admin
-      require(amount <= address(this).balance, "wrong amount" );
-      to.transfer(amount);
+    function addGameMaster(address _gm) external onlyAdmin() { //admin
+      gameMasters[_gm] = true;
+      emit GameMasterAdded(_gm);
+    }
+
+
+    function removeGameMaster(address _gm) external onlyAdmin() { //admin
+      gameMasters[_gm] = false;
+      emit GameMasterRemoved(_gm);
+    }
+
+    function addMinter(address _minter) external onlyAdmin() { //admin
+      minters[_minter] = true;
+      emit MinterAdded(_minter);
+    }
+
+    function removeMinter(address _minter) external onlyAdmin() { //admin
+      minters[_minter] = false;
+      emit MinterRemoved(_minter);
+    }
+
+
+    function withdraw(address payable to) external onlyAdmin() { //admin
+      to.transfer(address(this).balance);
     }
 
 
@@ -232,14 +241,20 @@ contract CryptoCoins is AccessControlEnumerable, ERC1155 {
     }
 
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
-      return super.supportsInterface(interfaceId);
+    function transferOwnership(address newAdmin) external onlyAdmin() { // ADMIN
+      emit OwnershipTransferred(admin, newAdmin);
+      admin = newAdmin;
     }
 
 
     modifier onlyAdmin() {
-      require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "admin only");
+      require(msg.sender == admin, 'admin only');
       _;
+    }
+
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155) returns (bool) {
+      return super.supportsInterface(interfaceId);
     }
 
 }

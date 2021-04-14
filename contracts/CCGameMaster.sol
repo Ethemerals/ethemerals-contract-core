@@ -34,12 +34,12 @@ contract CCGameMaster is ERC1155Holder {
     bool long;
   }
 
-  address admin;
   IERC1155 nftContract;
   IPriceFeed priceFeed;
 
   uint public reviverScorePenalty = 25;
   uint public reviverTokenReward = 10;
+  address private admin;
 
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
@@ -111,6 +111,11 @@ contract CCGameMaster is ERC1155Holder {
     require(msg.sender == admin, 'admin only');
     emit OwnershipTransferred(admin, newAdmin);
     admin = newAdmin;
+  }
+
+  function setPriceFeed(address _pfAddress) external {
+    require(msg.sender == admin, 'admin only');
+    priceFeed = IPriceFeed(_pfAddress);
   }
 
 }
