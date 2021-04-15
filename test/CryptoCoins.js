@@ -778,7 +778,7 @@ contract('ERC1155', accounts => {
     assert(balance.toNumber() === 1);
   })
 
-  it.only('should stake and cancel stake with different prices', async () => {
+  it('should stake and cancel stake with different prices', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
     await game.addGameMaster(gm.address);
     await addFeed(1);

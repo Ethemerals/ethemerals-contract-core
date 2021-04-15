@@ -51,6 +51,7 @@ contract CCGameMaster is ERC1155Holder {
   }
 
   function createStake(uint _tokenId, uint _priceFeedId, uint _position, bool long) external {
+    // require(_position > 0 && _position < 40000); // TURN OFF FOR MOCK
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId, 1, '');
     stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _position, long);
     emit StakeCreated(_tokenId, msg.sender, _priceFeedId);
