@@ -8,7 +8,7 @@ import "../openzep/token/ERC20/IERC20.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/ERC1155.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 
-//5000000 gas limit
+//3000000 gas limit
 //"https://cloudfront.net/api/meta/{id}", "0xDc1EC809D4b2b06c4CF369C63615eAeE347D45Ac"
 
 
@@ -40,7 +40,7 @@ contract CryptoCoins is ERC1155 {
 
     // ranking rewards
     uint private nonce;
-    uint public winnerMult = 1; // TEST PUBLIC
+    uint public winnerMult = 1;
     uint public winnerFunds;
     uint public winningCoin;
     uint public mintPrice = 100000000000000000;

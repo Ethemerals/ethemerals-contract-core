@@ -204,12 +204,14 @@ contract('ERC1155', accounts => {
 
   })
 
-  it('should Mint then revert then Mint again', async () => {
+
+  it('should Mint odd numbers', async () => {
 
     await game.setAvailableCoins([1,2]);
+    await game.setAvailableCoin(5);
     await game.setMintPrice(web3.utils.toWei('0.001'));
 
-    for (let i = 0; i < 20; i ++) {
+    for (let i = 0; i < 30; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('0.001')}),
       await time.increase(1);
     }
@@ -221,12 +223,17 @@ contract('ERC1155', accounts => {
 
     await game.setAvailableCoins([5,6]);
 
-    for (let i = 0; i < 20; i ++) {
+    for (let i = 0; i < 10; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('0.001')}),
       await time.increase(1);
     }
 
-    for (let i = 50; i < 70; i ++) {
+    await expectRevert(
+      game.buy({from: player1, value: web3.utils.toWei('0.001')}),
+      "no more"
+    );
+
+    for (let i = 60; i < 70; i ++) {
       let balance = await game.balanceOf(player1, i);
       assert(balance.toNumber() === 1);
     }
@@ -771,6 +778,55 @@ contract('ERC1155', accounts => {
     assert(balance.toNumber() === 1);
   })
 
+  it.only('should stake and cancel stake with different prices', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+    await game.addGameMaster(gm.address);
+    await addFeed(1);
+    await updatePriceCustom('1530541301857663049');
+
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+    await game.buy({from: admin, value: web3.utils.toWei('1')});
+
+    await game.setApprovalForAll(gm.address, true, {from: player2});
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+    await game.setApprovalForAll(gm.address, true, {from: admin});
+
+    // 100 position
+    await gm.createStake(10, 1, 1000, true, {from: player1});
+    await updatePriceCustom('1545941301857663049');
+    await gm.cancelStake(10, {from: player1});
+    token = await game.getCoinById(10);
+    console.log('position size 1000', token.score.toString(), token.rewards.toString());
+
+    // 1000 position
+    await updatePriceCustom('1530541301857663049');
+    await gm.createStake(11, 1, 5000, true, {from: player2});
+    await updatePriceCustom('1545941301857663049');
+    await gm.cancelStake(11, {from: player2});
+    token = await game.getCoinById(11);
+    console.log('position size 5000', token.score.toString(), token.rewards.toString());
+
+    // 5000 position
+    await updatePriceCustom('1530541301857663049');
+    await gm.createStake(12, 1, 10000, true, {from: admin});
+    await updatePriceCustom('1545941301857663049');
+    await gm.cancelStake(12, {from: admin});
+    token = await game.getCoinById(12);
+    console.log('position size 10000', token.score.toString(), token.rewards.toString());
+
+    // 20000 position
+    await updatePriceCustom('1530541301857663049');
+    await gm.createStake(10, 1, 20000, true, {from: player1});
+    await updatePriceCustom('1545941301857663049');
+    await gm.cancelStake(10, {from: player1});
+    token = await game.getCoinById(10);
+    console.log('position size 20000', token.score.toString(), token.rewards.toString());
+
+
+  })
+
   it('should stake and cancel stake with different prices', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
     await game.addGameMaster(gm.address);
@@ -779,57 +835,44 @@ contract('ERC1155', accounts => {
 
     await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.buy({from: player2, value: web3.utils.toWei('1')});
+    await game.buy({from: admin, value: web3.utils.toWei('1')});
 
+    await game.setApprovalForAll(gm.address, true, {from: player2});
     await game.setApprovalForAll(gm.address, true, {from: player1});
+    await game.setApprovalForAll(gm.address, true, {from: admin});
 
     // 100 position
-    await gm.createStake(10, 1, 100, true, {from: player1});
-    await updatePriceCustom(1100);
+    await gm.createStake(10, 1, 1000, true, {from: player1});
+    await updatePriceCustom(1050);
     await gm.cancelStake(10, {from: player1});
     token = await game.getCoinById(10);
-    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+    console.log('position size 1000', token.score.toString(), token.rewards.toString());
 
     // 1000 position
-    await gm.createStake(10, 1, 1000, true, {from: player1});
-    await updatePriceCustom(1210);
-    await gm.cancelStake(10, {from: player1});
-    token = await game.getCoinById(10);
-    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
-
-    // 10000 position
-    await gm.createStake(10, 1, 10000, true, {from: player1});
-    await updatePriceCustom(1332);
-    await gm.cancelStake(10, {from: player1});
-    token = await game.getCoinById(10);
-    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
-
-    // 100000 position
-    await gm.createStake(10, 1, 100000, true, {from: player1});
-    await updatePriceCustom(1466);
-    await gm.cancelStake(10, {from: player1});
-    token = await game.getCoinById(10);
-    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
-
-    let change;
-    // 100000 position
     await updatePriceCustom(1000);
-    await gm.createStake(10, 1, 100000, true, {from: player1});
-    await updatePriceCustom(1010);
-    change = await gm.getChange(10);
-    console.log('change', change[0].toString());
-    await gm.cancelStake(10, {from: player1});
-    token = await game.getCoinById(10);
-    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+    await gm.createStake(11, 1, 5000, true, {from: player2});
+    await updatePriceCustom(1050);
+    await gm.cancelStake(11, {from: player2});
+    token = await game.getCoinById(11);
+    console.log('position size 5000', token.score.toString(), token.rewards.toString());
 
-    // 100000 position
+    // 5000 position
     await updatePriceCustom(1000);
-    await gm.createStake(10, 1, 100000, true, {from: player1});
-    await updatePriceCustom(1010);
-    change = await gm.getChange(10);
-    console.log('change', change[0].toString());
+    await gm.createStake(12, 1, 10000, true, {from: admin});
+    await updatePriceCustom(1050);
+    await gm.cancelStake(12, {from: admin});
+    token = await game.getCoinById(12);
+    console.log('position size 10000', token.score.toString(), token.rewards.toString());
+
+    // 20000 position
+    await updatePriceCustom(1000);
+    await gm.createStake(10, 1, 20000, true, {from: player1});
+    await updatePriceCustom(1050);
     await gm.cancelStake(10, {from: player1});
     token = await game.getCoinById(10);
-    console.log('STAKING TOKEN', token.score.toString(), token.rewards.toString());
+    console.log('position size 20000', token.score.toString(), token.rewards.toString());
+
 
   })
 

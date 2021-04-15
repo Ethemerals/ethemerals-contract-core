@@ -7,7 +7,7 @@ pragma solidity 0.8.3;
 import "../openzep/token/ERC1155/utils/ERC1155Holder.sol";
 // 0x19f8b90D0448dad99D0968545e87651a96F699F6
 
-interface IERC1155 {
+interface ICryptoCoins {
   function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
   function balanceOf(address account, uint256 id) external view returns (uint256);
   function changeScore(uint _tokenId, uint offset, bool add, uint amount) external;
@@ -34,7 +34,7 @@ contract CCGameMaster is ERC1155Holder {
     bool long;
   }
 
-  IERC1155 nftContract;
+  ICryptoCoins nftContract;
   IPriceFeed priceFeed;
 
   uint public reviverScorePenalty = 25;
@@ -46,7 +46,7 @@ contract CCGameMaster is ERC1155Holder {
 
   constructor(address _nftAddress, address _priceFeedAddress) {
     admin = msg.sender;
-    nftContract = IERC1155(_nftAddress);
+    nftContract = ICryptoCoins(_nftAddress);
     priceFeed = IPriceFeed(_priceFeedAddress);
   }
 
@@ -61,7 +61,7 @@ contract CCGameMaster is ERC1155Holder {
     require(nftContract.balanceOf(address(this), _id) > 0, 'only staked');
     (uint change, bool win) = getChange(_id);
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id, 1, '');
-    nftContract.changeScore(_id, change, win, win ? change * 10**18 : 10**18);
+    nftContract.changeScore(_id, change, win, win ? change * 2 * 10**18 : 10**18);
     emit StakeCanceled(_id, msg.sender, stakes[_id].priceFeedId);
   }
 
