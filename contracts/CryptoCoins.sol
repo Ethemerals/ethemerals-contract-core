@@ -22,7 +22,8 @@ contract CryptoCoins is ERC1155 {
     // NFT ID range 1-6969
     // Bosses: 1, 2, 3, 4, 5, 6, 7, 8, 9
     // Bitcoin: starts at 10-19
-    // 696 ranked coin ends at 696-6969
+    // Last Coin ranked ends at 696 IDs 6969
+    // Total Characters
     // items start at 7000
 
     struct Coin {

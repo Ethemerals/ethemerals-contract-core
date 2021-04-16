@@ -769,6 +769,43 @@ contract('ERC1155', accounts => {
 
   })
 
+  it.only('should stake and get ressurected', async () => {
+    await cct.transfer(game.address, web3.utils.toWei('420000000'));
+    await game.addGameMaster(gm.address, true);
+    await addFeed(1);
+    await game.setAvailableCoin(1);
+    await game.buy({from: player1, value: web3.utils.toWei('1')});
+    await game.setApprovalForAll(gm.address, true, {from: player1});
+    await updatePriceCustom('1545941301857663049');
+    // 100 position
+    await gm.createStake(10, 1, 100000, true, {from: player1});
+    await updatePriceCustom('1415941301857663049');
+    await gm.cancelStake(10, {from: player1});
+    token = await game.getCoinById(10);
+    console.log(token.score.toString(), token.rewards.toString());
+    await expectRevert(
+      gm.resurrectToken(10, {from: player1, value: web3.utils.toWei('0.005')}),
+      'not enough'
+    );
+
+    await gm.resurrectToken(10, {from: player1, value: web3.utils.toWei('1')})
+    token = await game.getCoinById(10);
+    console.log(token.score.toString(), token.rewards.toString());
+    await expectRevert(
+      gm.resurrectToken(10, {from: player1, value: web3.utils.toWei('1')}),
+      'not dead'
+    );
+    balance = await web3.eth.getBalance(gm.address);
+    console.log('gm', balance.toString());
+    balance = await web3.eth.getBalance(admin);
+    console.log('admin', balance.toString());
+    await gm.withdraw(admin, {from: admin});
+    balance = await web3.eth.getBalance(gm.address);
+    console.log('gm', balance.toString());
+    balance = await web3.eth.getBalance(admin);
+    console.log('admin', balance.toString());
+  })
+
   it('should stake and unstake by admin', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 

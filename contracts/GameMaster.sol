@@ -11,6 +11,7 @@ interface ICryptoCoins {
   function balanceOf(address account, uint256 id) external view returns (uint256);
   function changeScore(uint _tokenId, uint offset, bool add, uint amount) external;
   function getCoinScore(uint _tokenId) external view returns (uint256);
+  function mintPrice() external view returns (uint256);
 }
 
 interface IPriceFeed {
@@ -77,6 +78,12 @@ contract GameMaster is ERC1155Holder {
     emit TokenRevived(_id0, reap, msg.sender, _id1);
   }
 
+  function resurrectToken(uint _id) external payable {
+    require(nftContract.getCoinScore(_id) <= 0, 'not dead');
+    require(msg.value >= nftContract.mintPrice(), 'not enough');
+    nftContract.changeScore(_id, 100, true, reviverTokenReward * 10**18); // revive with 50
+  }
+
   function getChange(uint _tokenId) public view returns (uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
@@ -95,27 +102,32 @@ contract GameMaster is ERC1155Holder {
     return stakes[_id];
   }
 
-  function cancelStakeAdmin(uint _id) external {
-    require(msg.sender == admin, 'admin only');
+  function cancelStakeAdmin(uint _id) external onlyAdmin() { //admin
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id, 1, '');
     emit StakeCanceled(_id, stakes[_id].owner, stakes[_id].priceFeedId);
   }
 
-  function setReviverRewards(uint _score, uint _token) external {
-    require(msg.sender == admin, 'admin only');
+  function setReviverRewards(uint _score, uint _token) external onlyAdmin() { //admin
     reviverScorePenalty = _score;
     reviverTokenReward = _token;
   }
 
-  function transferOwnership(address newAdmin) external {
-    require(msg.sender == admin, 'admin only');
-    emit OwnershipTransferred(admin, newAdmin);
+  function transferOwnership(address newAdmin) external onlyAdmin() { //admin
     admin = newAdmin;
+    emit OwnershipTransferred(admin, newAdmin);
   }
 
-  function setPriceFeed(address _pfAddress) external {
-    require(msg.sender == admin, 'admin only');
+  function setPriceFeed(address _pfAddress) external onlyAdmin() { //admin
     priceFeed = IPriceFeed(_pfAddress);
+  }
+
+  function withdraw(address payable to) external onlyAdmin() { //admin
+    to.transfer(address(this).balance);
+  }
+
+  modifier onlyAdmin() {
+    require(msg.sender == admin, 'admin only');
+    _;
   }
 
 }

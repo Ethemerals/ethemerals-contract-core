@@ -2,6 +2,11 @@
 
 pragma solidity 0.8.3;
 
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/IERC1155.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/IERC1155Receiver.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Address.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/introspection/ERC165.sol";
+
 import "../openzep/token/ERC1155/IERC1155.sol";
 import "../openzep/token/ERC1155/IERC1155Receiver.sol";
 import "../openzep/utils/Address.sol";
