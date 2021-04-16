@@ -2,25 +2,22 @@
 
 pragma solidity 0.8.3;
 
-import "../openzep/token/ERC1155/ERC1155.sol";
+import "./ERC1155.sol";
 import "../openzep/token/ERC20/IERC20.sol";
 
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/ERC1155.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 
 //3000000 gas limit
-//"https://cloudfront.net/api/meta/{id}", "0xDc1EC809D4b2b06c4CF369C63615eAeE347D45Ac"
+//"https://d1b1rc939omrh2.cloudfront.net/api/meta/", "https://d1b1rc939omrh2.cloudfront.net/api/contract", "0xDc1EC809D4b2b06c4CF369C63615eAeE347D45Ac"
+
 
 
 contract CryptoCoins is ERC1155 {
 
     event ChangeScore (uint indexed id, uint indexed score, bool indexed add, uint rewards);
-    event RedeemWinnerFunds (address indexed to, uint amount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event GameMasterAdded(address indexed gm);
-    event GameMasterRemoved(address indexed gm);
-    event MinterAdded(address indexed minter);
-    event MinterRemoved(address indexed minter);
+    event GameMasterChange(address indexed gm, bool add);
+    event MinterChange(address indexed minter, bool add);
 
     // NFT ID range 1-6969
     // Bosses: 1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -38,6 +35,8 @@ contract CryptoCoins is ERC1155 {
     address private tokenAddress;
     address private admin;
 
+    string private contractUri;
+
     // ranking rewards
     uint private nonce;
     uint public winnerMult = 1;
@@ -53,11 +52,15 @@ contract CryptoCoins is ERC1155 {
     mapping (address => bool) private gameMasters;
     mapping (address => bool) private minters;
 
+    // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
+    string private _uri;
 
 
-    constructor(string memory uri, address _tokenAddress) ERC1155(uri) {
+    constructor(string memory tUri, string memory cUri, address _tokenAddress) ERC1155() {
       admin = msg.sender;
       minters[msg.sender] = true;
+      _uri = tUri;
+      contractUri = cUri;
       tokenAddress = _tokenAddress;
     }
 
@@ -181,7 +184,6 @@ contract CryptoCoins is ERC1155 {
       winnerMult = 1;
       nonce = 0;
       IERC20(tokenAddress).transfer(msg.sender, amount);
-      emit RedeemWinnerFunds(msg.sender, amount);
     }
 
 
@@ -200,25 +202,15 @@ contract CryptoCoins is ERC1155 {
     }
 
 
-    function addGameMaster(address _gm) external onlyAdmin() { //admin
-      gameMasters[_gm] = true;
-      emit GameMasterAdded(_gm);
+    function addGameMaster(address _gm, bool add) external onlyAdmin() { //admin
+      gameMasters[_gm] = add;
+      emit GameMasterChange(_gm, add);
     }
 
 
-    function removeGameMaster(address _gm) external onlyAdmin() { //admin
-      gameMasters[_gm] = false;
-      emit GameMasterRemoved(_gm);
-    }
-
-    function addMinter(address _minter) external onlyAdmin() { //admin
-      minters[_minter] = true;
-      emit MinterAdded(_minter);
-    }
-
-    function removeMinter(address _minter) external onlyAdmin() { //admin
-      minters[_minter] = false;
-      emit MinterRemoved(_minter);
+    function addMinter(address _minter, bool add) external onlyAdmin() { //admin
+      minters[_minter] = add;
+      emit MinterChange(_minter, add);
     }
 
 
@@ -254,8 +246,43 @@ contract CryptoCoins is ERC1155 {
     }
 
 
+    function uri(uint _id) public view returns (string memory) {
+      return string(abi.encodePacked(_uri, _toString(_id)));
+    }
+
+    function setURI(string memory newuri) external onlyAdmin() {// ADMIN
+      _uri = newuri;
+    }
+
+    function contractURI() public view returns (string memory) {
+      return contractUri;
+    }
+
+    function setContractURI(string memory _cUri) external onlyAdmin() {// ADMIN
+      contractUri = _cUri;
+    }
+
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155) returns (bool) {
       return super.supportsInterface(interfaceId);
+    }
+
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 
 }

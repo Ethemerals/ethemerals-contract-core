@@ -2,7 +2,7 @@ const { expectRevert, time } = require('@openzeppelin/test-helpers');
 const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 const CCT = artifacts.require('CryptoCoinsTokens');
 const Game = artifacts.require('CryptoCoins');
-const GM = artifacts.require('CCGameMaster');
+const GM = artifacts.require('GameMaster');
 const UniswapMock = artifacts.require('UniswapMockRouter');
 const PriceFeed = artifacts.require('PriceFeed');
 
@@ -23,7 +23,7 @@ contract('ERC1155', accounts => {
 
   beforeEach(async () => {
     cct = await CCT.new("CryptoCoinsTokens", "CCT");
-    game = await Game.new('https://d5ianf82isuvq.cloudfront.net/api/meta/', cct.address);
+    game = await Game.new('https://d5ianf82isuvq.cloudfront.net/api/meta/', 'https://www.hello.com', cct.address);
     uniswap = await UniswapMock.new();
     priceFeed = await PriceFeed.new(uniswap.address);
     gm = await GM.new(game.address, priceFeed.address);
@@ -62,6 +62,23 @@ contract('ERC1155', accounts => {
       game.mint(player1, 0, 1, datax, {from: player1}),
       "minter only"
     );
+  })
+
+  it('should get and set contractURI', async () => {
+    let value = await game.contractURI();
+    console.log(value.toString());
+    await game.setContractURI('https://www.whatsupdoc.com');
+
+    value = await game.contractURI();
+    console.log(value.toString());
+    assert(value.toString() == "https://www.whatsupdoc.com");
+
+    value = await game.uri(10);
+    console.log(value.toString());
+
+    await game.setURI("heelowWorld/");
+    value = await game.uri(10);
+    console.log(value.toString());
   })
 
   it('it Should mint a token', async () => {
@@ -134,14 +151,14 @@ contract('ERC1155', accounts => {
     await game.setAvailableCoin(1);
 
     const amount = 10;
-    await game.addMinter(player1);
+    await game.addMinter(player1, true);
     await game.mint(player2, 1, amount, datax, {from: player1});
 
     // TODO
     const balance = await game.balanceOf(player2, 1);
     assert(balance.toNumber() === amount);
 
-    await game.removeMinter(admin);
+    await game.addMinter(admin, false);
     await expectRevert(
       game.mint(player1, 1, amount, datax, {from: admin}),
       "minter only"
@@ -282,7 +299,7 @@ contract('ERC1155', accounts => {
   // TODO
   it('should Update token score', async () => {
 
-    await game.addGameMaster(admin);
+    await game.addGameMaster(admin, true);
     await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
@@ -303,7 +320,7 @@ contract('ERC1155', accounts => {
     token = await game.getCoinById(10);
     assert(token.score == 0);
 
-    await game.removeGameMaster(admin);
+    await game.addGameMaster(admin, false);
     await expectRevert(
       game.changeScore(10, 600, false, '0'),
       "gm only"
@@ -355,7 +372,7 @@ contract('ERC1155', accounts => {
 
   it('should add rewards tokens to NFT token', async () => {
     // Transfer CCT
-    await game.addGameMaster(admin);
+    await game.addGameMaster(admin, true);
     await cct.transfer(game.address, web3.utils.toWei('100000000'))
     let value = await cct.balanceOf(game.address);
     assert(value.toString() === web3.utils.toWei('100000000'))
@@ -395,7 +412,7 @@ contract('ERC1155', accounts => {
 
   it('should grant GM role to player1 and change score', async () => {
     await game.setAvailableCoin(1);
-    await game.addGameMaster(player1);
+    await game.addGameMaster(player1, true);
     await game.buy({from: player2, value: web3.utils.toWei('1')});
 
     let count = 0;
@@ -417,7 +434,7 @@ contract('ERC1155', accounts => {
 
 
   it('should increase winnerFund and redeem', async () => {
-    await game.addGameMaster(admin);
+    await game.addGameMaster(admin, true);
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
     let balance = await cct.balanceOf(game.address);
 
@@ -443,7 +460,7 @@ contract('ERC1155', accounts => {
   })
 
   it('should update winning coin and redeem', async () => {
-    await game.addGameMaster(admin);
+    await game.addGameMaster(admin, true);
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
 
     await game.setAvailableCoin(1);
@@ -469,7 +486,7 @@ contract('ERC1155', accounts => {
   })
 
   it('should keep scoring even without funds', async () => {
-    await game.addGameMaster(admin);
+    await game.addGameMaster(admin, true);
     await cct.transfer(game.address, web3.utils.toWei('20'));
     let balance = await cct.balanceOf(game.address);
     let value = await game.winnerFunds();
@@ -497,7 +514,7 @@ contract('ERC1155', accounts => {
   })
 
   it('should update multiplier', async () => {
-    await game.addGameMaster(admin);
+    await game.addGameMaster(admin, true);
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
     await game.setAvailableCoin(1);
@@ -538,7 +555,7 @@ contract('ERC1155', accounts => {
   it('should create stake and cancel stake, owner only', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
 
     await addFeed(1);
     await updatePrice();
@@ -614,7 +631,7 @@ contract('ERC1155', accounts => {
 
   it('should stake and unstake and get bps', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await updatePrice();
 
@@ -664,7 +681,7 @@ contract('ERC1155', accounts => {
 
   it('should stake and get revived', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await updatePriceHigh();
 
@@ -699,7 +716,7 @@ contract('ERC1155', accounts => {
   it('should stake and get reaped', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await updatePrice();
 
@@ -755,7 +772,7 @@ contract('ERC1155', accounts => {
   it('should stake and unstake by admin', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
 
     await game.setAvailableCoin(1);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
@@ -780,7 +797,7 @@ contract('ERC1155', accounts => {
 
   it('should stake and cancel stake with different prices', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await updatePriceCustom('1530541301857663049');
 
@@ -829,7 +846,7 @@ contract('ERC1155', accounts => {
 
   it('should stake and cancel stake with different prices', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
-    await game.addGameMaster(gm.address);
+    await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await updatePriceCustom(1000);
 

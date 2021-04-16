@@ -3,7 +3,6 @@
 pragma solidity 0.8.3;
 
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-
 import "../openzep/token/ERC1155/utils/ERC1155Holder.sol";
 // 0x19f8b90D0448dad99D0968545e87651a96F699F6
 
@@ -18,7 +17,7 @@ interface IPriceFeed {
   function getPrice(uint _id) external view returns (uint);
 }
 
-contract CCGameMaster is ERC1155Holder {
+contract GameMaster is ERC1155Holder {
 
   event StakeCreated (uint indexed tokenId, address indexed owner, uint priceFeedId);
   event StakeCanceled (uint indexed tokenId, address indexed owner, uint priceFeedId);
