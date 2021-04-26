@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.3;
+pragma solidity ^0.8.3;
 
 import "./ERC1155.sol";
 import "../openzep/token/ERC20/IERC20.sol";
@@ -19,10 +19,10 @@ contract CryptoCoins is ERC1155 {
     event GameMasterChange(address indexed gm, bool add);
     event MinterChange(address indexed minter, bool add);
 
-    // NFT ID range 1-6969
-    // Bosses: 1, 2, 3, 4, 5, 6, 7, 8, 9
+    // NFT ID range 1-4209
+    // Bosses: 1, 2, 3, 4, 5, 6, 7,W 8, 9
     // Bitcoin: starts at 10-19
-    // Last Coin ranked ends at 696 IDs 6969
+    // Last Coin ranked ends at 420 IDs 4209
     // Total Characters
     // items start at 7000
 
@@ -43,7 +43,7 @@ contract CryptoCoins is ERC1155 {
     uint public winnerMult = 1;
     uint public winnerFunds;
     uint public winningCoin;
-    uint public mintPrice = 100000000000000000;
+    uint public mintPrice = 1000000000000000000;
 
     // iterable array of available classes
     uint[] private availableCoins;

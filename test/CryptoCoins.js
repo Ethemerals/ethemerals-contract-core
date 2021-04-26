@@ -769,7 +769,7 @@ contract('ERC1155', accounts => {
 
   })
 
-  it.only('should stake and get ressurected', async () => {
+  it('should stake and get ressurected', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
     await game.addGameMaster(gm.address, true);
     await addFeed(1);
