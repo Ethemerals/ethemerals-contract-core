@@ -5,10 +5,9 @@ pragma solidity ^0.8.3;
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "../openzep/token/ERC20/extensions/ERC20Burnable.sol";
 
-// gas limit 3000000
-// "CryptoCoinsTokens", "CCT"
+// "Ethemeral Life Force", "ELF"
 
-contract CryptoCoinsTokens is Context, ERC20Burnable {
+contract EthemeralLifeForce is Context, ERC20Burnable {
     /**
       * Mint total supply 420 million
       * Mint to investors and devs

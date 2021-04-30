@@ -45,11 +45,21 @@ module.exports = {
       provider: () =>
         new HDWalletProvider(
           process.env.SEED,
-          `https://kovan.infura.io/v3/${process.env.PROJECTID}`
+          process.env.ALCHEMY_KOVAN
         ),
         network_id: 42,
         from: process.env.ADDRESS,
-        gas: 8500000,           // Gas sent with each transaction (default: ~6700000)
+        // gas: 8500000,           // Gas sent with each transaction (default: ~6700000)
+    },
+    rinkeby: {
+      provider: () =>
+        new HDWalletProvider(
+          process.env.SEED,
+          `https://rinkeby.infura.io/v3/${process.env.PROJECTID}`
+        ),
+        network_id: 4,
+        from: process.env.ADDRESS,
+        // gas: 8500000,           // Gas sent with each transaction (default: ~6700000)
     }
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
@@ -92,7 +102,7 @@ module.exports = {
   // Set default mocha options here, use special reporters etc.
   mocha: {
     reporter: 'eth-gas-reporter',
-    reporterOptions : { gasPrice: '50', coinmarketcap: '65fadc0f-f9c5-4323-94b1-e2587d39406d', currency: 'USD'} // See options below
+    reporterOptions : { gasPrice: '100', coinmarketcap: '65fadc0f-f9c5-4323-94b1-e2587d39406d', currency: 'USD'} // See options below
   },
 
   // Configure your compilers
