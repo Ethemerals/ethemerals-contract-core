@@ -45,8 +45,8 @@ contract Ethemerals is ERC721 {
     uint public winnerMult = 1;
     uint public winnerFunds;
     uint public winningCoin;
-    uint public mintPrice = 1000000000000000000;
-    uint public revivePrice = 1000000000000000000000;
+    uint public mintPrice = 100*10**18;
+    uint public revivePrice = 1000*10**18; //1000 tokens
 
     // iterable array of available classes
     uint[] private availableCoins;
@@ -57,9 +57,10 @@ contract Ethemerals is ERC721 {
     // access control
     mapping (address => bool) private gameMasters;
     mapping (address => bool) private minters;
+    mapping (address => bool) private disallowDelegates; // default allows, user needs to disallow
 
     string private _uri;
-    bool private allowDelegates = true;
+
 
 
     constructor(string memory tUri, string memory cUri, address _tokenAddress, string memory name, string memory symbol) ERC721(name, symbol) {
@@ -78,7 +79,7 @@ contract Ethemerals is ERC721 {
 
     // buys a random token from available class
     function buy() payable external {
-      require(msg.value >= mintPrice || (IERC20(tokenAddress).balanceOf(msg.sender) >= 2000000000000000000000 && msg.value >= (mintPrice - mintPrice/4)), "not enough"); // discount 2000 rewards
+      require(msg.value >= mintPrice || (IERC20(tokenAddress).balanceOf(msg.sender) >= 2000*10**18 && msg.value >= (mintPrice - mintPrice/4)), "not enough"); // discount 2000 rewards
       _mintAvailableToken(msg.sender);
     }
 
@@ -94,7 +95,7 @@ contract Ethemerals is ERC721 {
         if (edition < 10) {
           uint _tokenId = availableCoins[randCoinClass] * 10 + edition;
           _mint(to, _tokenId);
-          coinEditions[availableCoins[randCoinClass]].push(Coin(_tokenId, 300, 1000000000000000000000)); // 1000 rewards
+          coinEditions[availableCoins[randCoinClass]].push(Coin(_tokenId, 300, 1000*10**18)); // 1000 rewards
           nonce++;
           return;
         } else {
@@ -127,6 +128,7 @@ contract Ethemerals is ERC721 {
     }
 
     function _changeScore(uint _tokenId, uint offset, bool add, uint amount) internal {
+      require(_exists(_tokenId), "not exist");
       Coin storage tokenCurrent = coinEditions[_tokenId / 10][_tokenId % 10];
 
       uint _score = tokenCurrent.score;
@@ -142,7 +144,7 @@ contract Ethemerals is ERC721 {
         }
       }
       tokenCurrent.score = newScore;
-      uint amountClamped = amount > 1000000000000000000000 ? 1000000000000000000000 : amount; //Clamp
+      uint amountClamped = amount > 10000*10**18 ? 10000*10**18 : amount; //clamp 10000 tokens
       tokenCurrent.rewards += amountClamped;
 
       if(winningCoin == 0) {
@@ -152,11 +154,10 @@ contract Ethemerals is ERC721 {
       }
 
       //2%-10% pct sent to winner fund, 200 basis points = 2%
-      if(amountClamped > 1000000000)  { //1 Gwei
-        winnerMult = winnerMult < 10 ? nonce / 10 + 1 : 10;
-        uint fundAmount = amountClamped * 200 * winnerMult / 10000;
-        winnerFunds += fundAmount;
-      }
+      winnerMult = winnerMult < 10 ? nonce / 10 + 1 : 10;
+      uint fundAmount = amountClamped * 200 * winnerMult / 10000;
+      winnerFunds += fundAmount;
+
 
       nonce++;
       emit ChangeScore(_tokenId, newScore, add, amountClamped);
@@ -187,15 +188,20 @@ contract Ethemerals is ERC721 {
     function resurrectWithEth(uint _id) external payable {
       require(coinEditions[_id / 10][_id % 10].score <= 25, 'not dead');
       require(msg.value >= mintPrice, 'not enough');
-      _changeScore(_id, 100, true, 100000000000000000000); // revive with 100 & 10 rewards
+      _changeScore(_id, 100, true, 100*10**18); // revive with 100 & 100 rewards
     }
 
     function resurrectWithToken(uint _id) external {
       require(coinEditions[_id / 10][_id % 10].score <= 25, 'not dead');
       require(IERC20(tokenAddress).balanceOf(msg.sender) >= revivePrice , 'not enough');
       if(IERC20(tokenAddress).transferFrom(msg.sender, address(this), revivePrice)){
-        _changeScore(_id, 100, true, 100000000000000000000); // revive with 100 & 10 rewards
+        _changeScore(_id, 100, true, 100*10**18); // revive with 100 & 100 rewards
       }
+    }
+
+
+    function setDisallowDelegates(bool disallow) external { // setting true will disallow delegates
+      disallowDelegates[msg.sender] = disallow;
     }
 
 
@@ -253,11 +259,6 @@ contract Ethemerals is ERC721 {
     }
 
 
-    function setAllowDelegates(bool allow) external onlyAdmin() {// ADMIN
-      allowDelegates = allow;
-    }
-
-
     // VIEW ONLY
     function _baseURI() internal view override returns (string memory) {
       return _uri;
@@ -288,7 +289,7 @@ contract Ethemerals is ERC721 {
      * white list for game masters and auction house
      */
     function isApprovedForAll(address owner, address operator) public view override returns (bool) {
-      if (allowDelegates && (gameMasters[operator] == true)) {
+      if (!disallowDelegates[owner] && (gameMasters[operator] == true)) {
         return true;
       }
 

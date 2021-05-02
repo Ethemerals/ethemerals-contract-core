@@ -38,7 +38,8 @@ contract EternalBattle is ERC721Holder {
   IPriceFeed priceFeed;
 
   uint public reviverScorePenalty = 25;
-  uint public reviverTokenReward = 100000000000000000000;
+  uint public reviverTokenReward = 1000*10**18; //1000 tokens
+  uint private participationReward = 100*10**18; //100 tokens
   address private admin;
 
   // mapping tokenId to stake;
@@ -51,7 +52,7 @@ contract EternalBattle is ERC721Holder {
   }
 
   function createStake(uint _tokenId, uint _priceFeedId, uint _position, bool long) external {
-    // require(_position > 0 && _position < 40000); // TURN OFF FOR MOCK
+    require(_position > 0 && _position <= 20000); // TURN OFF FOR MOCK TODO
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
     stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _position, long);
     emit StakeCreated(_tokenId, msg.sender, _priceFeedId);
@@ -62,7 +63,7 @@ contract EternalBattle is ERC721Holder {
     require(nftContract.ownerOf(_id) == address(this), 'only staked');
     (uint change, bool win) = getChange(_id);
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
-    nftContract.changeScore(_id, change, win, win ? change * 2 * 10**18 : 10**18);
+    nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
     emit StakeCanceled(_id, msg.sender, stakes[_id].priceFeedId);
   }
 
@@ -73,8 +74,8 @@ contract EternalBattle is ERC721Holder {
     uint scoreBefore = nftContract.getCoinScore(_id0);
     require((win != true && scoreBefore <= (change + 20)), 'not dead');
     nftContract.safeTransferFrom(address(this), reap ? msg.sender : stakes[_id0].owner, _id0); // take owne0rship or return ownership
-    nftContract.changeScore(_id0, scoreBefore - 50, false, 10**18); // revive with 50
-    nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? 10**18 : reviverTokenReward * 10**18); // reaper minus 2x points and add rewards
+    nftContract.changeScore(_id0, scoreBefore - 50, false, participationReward); // revive with 50 hp
+    nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? participationReward : reviverTokenReward); // reaper minus 2x points and add rewards
     emit TokenRevived(_id0, reap, msg.sender, _id1);
   }
 

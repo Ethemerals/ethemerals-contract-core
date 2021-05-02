@@ -6,6 +6,9 @@ pragma solidity ^0.8.3;
 import "../openzep/token/ERC20/extensions/ERC20Burnable.sol";
 
 // "Ethemeral Life Force", "ELF"
+// ETH per ELF 0.0000036 or 10:250 0000
+// 10
+// 2500000
 
 contract EthemeralLifeForce is Context, ERC20Burnable {
     /**
