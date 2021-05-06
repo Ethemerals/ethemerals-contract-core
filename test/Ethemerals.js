@@ -112,7 +112,7 @@ contract('ERC721', accounts => {
   it('should set MintPrice and buy', async () => {
 
     await game.setAvailableCoins([1,2]);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     let balance = await web3.eth.getBalance(player2);
 
     for (let i = 0; i < 20; i ++) {
@@ -133,7 +133,7 @@ contract('ERC721', accounts => {
 
     // get more editions
     await game.setAvailableCoins([3,4]);
-    await game.setMintPrice(web3.utils.toWei('10'));
+    await game.setPrice(web3.utils.toWei('10'), true);
 
     for (let i = 0; i < 4; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('10')});
@@ -147,7 +147,7 @@ contract('ERC721', accounts => {
   it('should set MintPrice and buy at discount', async () => {
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player2, value: web3.utils.toWei('1')});
 
     owner = await game.ownerOf(10);
@@ -163,7 +163,7 @@ contract('ERC721', accounts => {
   it('should grant Minter role to player1 and mint token', async () => {
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
 
     const amount = 10;
     await game.addMinter(player1, true);
@@ -188,7 +188,7 @@ contract('ERC721', accounts => {
     );
 
     await game.setAvailableCoins([1,2]);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     let availableCoins = await game.getAvailableCoins();
     console.log('availableCoins', availableCoins.toString())
 
@@ -217,7 +217,7 @@ contract('ERC721', accounts => {
 
     await game.setAvailableCoins([1,2]);
     await game.setAvailableCoin(5);
-    await game.setMintPrice(web3.utils.toWei('0.001'));
+    await game.setPrice(web3.utils.toWei('0.001'), true);
 
     for (let i = 0; i < 30; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('0.001')}),
@@ -251,7 +251,7 @@ contract('ERC721', accounts => {
   it('should Mint then return coin with 300 score', async () => {
 
     await game.setAvailableCoins([5,6]);
-    await game.setMintPrice(web3.utils.toWei('0.001'));
+    await game.setPrice(web3.utils.toWei('0.001'), true);
 
     for (let i = 0; i < 20; i ++) {
       await game.buy({from: player1, value: web3.utils.toWei('0.001')}),
@@ -271,7 +271,7 @@ contract('ERC721', accounts => {
   it('should NOT buy without enough ETH', async () => {
 
     await game.setAvailableCoins([1,2]);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
 
     await expectRevert(
       game.buy({from: player1, value: web3.utils.toWei('0.5')}),
@@ -292,7 +292,7 @@ contract('ERC721', accounts => {
 
     await game.addGameMaster(admin, true);
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
     console.log(token.score);
@@ -327,7 +327,7 @@ contract('ERC721', accounts => {
     console.log(value.toString());
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     let token = await game.getCoinById(10);
     let rewards = token.rewards;
@@ -351,7 +351,7 @@ contract('ERC721', accounts => {
     assert(value.toString() === web3.utils.toWei('100000000'))
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await expectRevert(
@@ -372,7 +372,7 @@ contract('ERC721', accounts => {
     assert(value.toString() === web3.utils.toWei('100000000'))
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await game.changeScore(10, 0, false, web3.utils.toWei('100'))
@@ -395,7 +395,7 @@ contract('ERC721', accounts => {
     assert(value.toString() === web3.utils.toWei('100000000'))
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await expectRevert(
@@ -408,7 +408,7 @@ contract('ERC721', accounts => {
 
   it('should grant GM role to player1 and change score', async () => {
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.addGameMaster(player1, true);
     await game.buy({from: player2, value: web3.utils.toWei('1')});
 
@@ -436,7 +436,7 @@ contract('ERC721', accounts => {
     let balance = await cct.balanceOf(game.address);
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     let count = 0;
@@ -462,7 +462,7 @@ contract('ERC721', accounts => {
     await cct.transfer(game.address, web3.utils.toWei('100000000'));
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
 
@@ -491,7 +491,7 @@ contract('ERC721', accounts => {
     let value = await game.winnerFunds();
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     let count = 0;
@@ -518,7 +518,7 @@ contract('ERC721', accounts => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
 
@@ -554,7 +554,7 @@ contract('ERC721', accounts => {
 
   it('should not allow transfer', async () => {
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await expectRevert(
       game.transferFrom(player1, player2, 10),
@@ -576,7 +576,7 @@ contract('ERC721', accounts => {
 
   it('should allow auction house transfers and dissallow', async () => {
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.addGameMaster(player2, true);
     await game.transferFrom(player1, admin, 10, {from: player2}),
@@ -597,7 +597,7 @@ contract('ERC721', accounts => {
 
   it('should NOT allow auction house transfers', async () => {
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.addGameMaster(player2, true);
     await game.transferFrom(player1, admin, 10, {from: player2}),
@@ -662,7 +662,7 @@ contract('ERC721', accounts => {
     await addFeed(1);
     await updatePrice();
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player1, value: web3.utils.toWei('1')});
@@ -721,14 +721,14 @@ contract('ERC721', accounts => {
     );
   })
 
-  it.only('should stake and unstake and get bps', async () => {
+  it('should stake and unstake and get bps', async () => {
     await cct.transfer(game.address, web3.utils.toWei('420000000'));
     await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await updatePrice();
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
 
@@ -784,7 +784,7 @@ contract('ERC721', accounts => {
     await updatePriceHigh();
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
     await game.buy({from: admin, value: web3.utils.toWei('1')});
@@ -820,7 +820,7 @@ contract('ERC721', accounts => {
     await updatePrice();
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
     await game.buy({from: admin, value: web3.utils.toWei('1')});
@@ -877,7 +877,7 @@ contract('ERC721', accounts => {
     await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     // await game.setApprovalForAll(gm.address, true, {from: player1});
     await updatePriceCustom('1545941301857663049');
@@ -913,7 +913,7 @@ contract('ERC721', accounts => {
     await game.addGameMaster(gm.address, true);
     await addFeed(1);
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     await updatePriceCustom('1545941301857663049');
@@ -960,7 +960,7 @@ contract('ERC721', accounts => {
     await game.addGameMaster(gm.address, true);
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
 
     owner = await game.ownerOf(10);
@@ -988,7 +988,7 @@ contract('ERC721', accounts => {
     await updatePriceCustom('1530541301857663049');
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
     await game.buy({from: admin, value: web3.utils.toWei('1')});
@@ -1038,7 +1038,7 @@ contract('ERC721', accounts => {
     await updatePriceCustom(1000);
 
     await game.setAvailableCoin(1);
-    await game.setMintPrice(web3.utils.toWei('1'));
+    await game.setPrice(web3.utils.toWei('1'), true);
     await game.buy({from: player1, value: web3.utils.toWei('1')});
     await game.buy({from: player2, value: web3.utils.toWei('1')});
     await game.buy({from: admin, value: web3.utils.toWei('1')});
@@ -1101,7 +1101,7 @@ contract('ERC721', accounts => {
   //   await addFeed(1);
 
   //   await game.setAvailableCoin(1);
-  //   await game.setMintPrice(web3.utils.toWei('1'));
+  // await game.setPrice(web3.utils.toWei('1'), true);
   //   await game.buy({from: player1, value: web3.utils.toWei('1')});
   //   await game.buy({from: player2, value: web3.utils.toWei('1')});
 
@@ -1133,7 +1133,7 @@ contract('ERC721', accounts => {
   //     coinClass.push(i);
   //   }
   //   await game.setAvailableCoins(coinClass);
-  //   await game.setMintPrice(web3.utils.toWei('0.001'));
+  //    await game.setPrice(web3.utils.toWei('0.001'), true);
   //   let availableCoins = await game.getAvailableCoins();
   //   console.log('availableCoins', availableCoins.toString())
 

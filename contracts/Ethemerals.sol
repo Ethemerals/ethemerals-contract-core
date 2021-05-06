@@ -15,10 +15,14 @@ import "../openzep/token/ERC20/IERC20.sol";
 
 contract Ethemerals is ERC721 {
 
-    event ChangeScore(uint indexed id, uint indexed score, bool indexed add, uint rewards);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event GameMasterChange(address indexed gm, bool add);
-    event MinterChange(address indexed minter, bool add);
+    event ChangeScore(uint id, uint score, bool add, uint rewards);
+    event OwnershipTransferred(address previousOwner, address newOwner);
+    event GameMasterChange(address gm, bool add);
+    event MinterChange(address minter, bool add);
+    event PriceChange(uint price, bool eth);
+    event Resurrection(uint id, bool eth);
+    event Redemption(uint id, bool fromToken);
+    event DisallowDelegatesChange(address user, bool disallow);
 
     // NFT ID range 1-4209
     // Bosses: 1, 2, 3, 4, 5, 6, 7,W 8, 9
@@ -69,6 +73,7 @@ contract Ethemerals is ERC721 {
       _uri = tUri;
       contractUri = cUri;
       tokenAddress = _tokenAddress;
+      emit OwnershipTransferred(address(0), msg.sender);
     }
 
 
@@ -170,6 +175,7 @@ contract Ethemerals is ERC721 {
       uint amount = coinEditions[_tokenId / 10][_tokenId % 10].rewards;
       coinEditions[_tokenId / 10][_tokenId % 10].rewards = 0;
       IERC20(tokenAddress).transfer(msg.sender, amount);
+      emit Redemption(_tokenId, true);
     }
 
 
@@ -182,6 +188,7 @@ contract Ethemerals is ERC721 {
       winnerMult = 1;
       nonce = 0;
       IERC20(tokenAddress).transfer(msg.sender, amount);
+      emit Redemption(_tokenId, false);
     }
 
 
@@ -189,6 +196,7 @@ contract Ethemerals is ERC721 {
       require(coinEditions[_id / 10][_id % 10].score <= 25, 'not dead');
       require(msg.value >= mintPrice, 'not enough');
       _changeScore(_id, 100, true, 100*10**18); // revive with 100 & 100 rewards
+      emit Resurrection(_id, true);
     }
 
     function resurrectWithToken(uint _id) external {
@@ -196,12 +204,14 @@ contract Ethemerals is ERC721 {
       require(IERC20(tokenAddress).balanceOf(msg.sender) >= revivePrice , 'not enough');
       if(IERC20(tokenAddress).transferFrom(msg.sender, address(this), revivePrice)){
         _changeScore(_id, 100, true, 100*10**18); // revive with 100 & 100 rewards
+        emit Resurrection(_id, false);
       }
     }
 
 
     function setDisallowDelegates(bool disallow) external { // setting true will disallow delegates
       disallowDelegates[msg.sender] = disallow;
+      emit DisallowDelegatesChange(msg.sender, disallow);
     }
 
 
@@ -216,13 +226,13 @@ contract Ethemerals is ERC721 {
     }
 
 
-    function setMintPrice(uint _price) external onlyAdmin() { //admin
-      mintPrice = _price;
-    }
-
-
-    function setReviveTokenPrice(uint _price) external onlyAdmin() { //admin
-      revivePrice = _price;
+    function setPrice(uint _price, bool inEth) external onlyAdmin() { //admin
+      if(inEth) {
+        mintPrice = _price;
+      } else {
+        revivePrice = _price;
+      }
+      emit PriceChange(_price, inEth);
     }
 
 

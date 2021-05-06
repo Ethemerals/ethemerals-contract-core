@@ -17,6 +17,7 @@
     "@truffle/hdwallet-provider": "^1.2.5",
     "dotenv": "^8.2.0",
     "eth-gas-reporter": "^0.2.22",
-    "truffle-contract-size": "^2.0.1"
+    "truffle-contract-size": "^2.0.1",
+    "write-json-file": "^4.3.0"
   }
 }

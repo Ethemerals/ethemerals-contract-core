@@ -1,12 +1,16 @@
-  Deploying 'EthemeralLifeForce'
+
+2_deploy.js
+===========
+
+   Replacing 'EthemeralLifeForce'
    ------------------------------
-   > transaction hash:    0x4fb8616b05d530ca430f479a5e36c27cae76314523ef6cc9a5c67997a46549b3
+   > transaction hash:    0x7c4e342a8eec810978bb098b73bd2d91c89891d875804ce776c0f335a7698d1d
    > Blocks: 1            Seconds: 4
-   > contract address:    0xA22734e9B9fdfF986DE3c0473899Ce34BC568002
-   > block number:        24561875
-   > block timestamp:     1619776148
+   > contract address:    0x194DC03B2efA25247548f357b0CC4ea67219E7B4
+   > block number:        24678654
+   > block timestamp:     1620251032
    > account:             0x67256aB8E993Ed8647CBc4723883F4936058dfF2
-   > balance:             28.375300802020037726
+   > balance:             32.065318940070037723
    > gas used:            776348 (0xbd89c)
    > gas price:           20 gwei
    > value sent:          0 ETH
@@ -22,61 +26,67 @@
 3_deploy.js
 ===========
 
-   Deploying 'Ethemerals'
+   Replacing 'Ethemerals'
    ----------------------
-   > transaction hash:    0x11597ad53f424b6fc7cdc9a1c428f30cf100fd1aaf8b1027784ae2abff7880c6
+   > transaction hash:    0x658de20fd1c510f5c425d9c09f054e16a19bfeb806619fa40bb5065df634885a
    > Blocks: 1            Seconds: 4
-   > contract address:    0x456F9423F3D7c27aB4e0133d2C0a64206Bddc7fc
-   > block number:        24561879
-   > block timestamp:     1619776164
+   > contract address:    0x223AE6D36A57b6Ae82A5A0bd0AaF7386C931Db46
+   > block number:        24678658
+   > block timestamp:     1620251048
    > account:             0x67256aB8E993Ed8647CBc4723883F4936058dfF2
-   > balance:             28.315874882020037726
-   > gas used:            2944006 (0x2cec06)
+   > balance:             32.006033580070037723
+   > gas used:            2936978 (0x2cd092)
    > gas price:           20 gwei
    > value sent:          0 ETH
-   > total cost:          0.05888012 ETH
+   > total cost:          0.05873956 ETH
 
 
-   Deploying 'UniswapMockRouter'
+   Replacing 'UniswapMockRouter'
    -----------------------------
-   > transaction hash:    0xb4c043b742143f05b0aefb79c0af9fa2aaf27d42800006911ef75de18c34baac
+   > transaction hash:    0x491d93d1fbc30d34505586bef4f32feb7cda90a47fa11f3627e7f1c16fbebdc4
    > Blocks: 1            Seconds: 4
-   > contract address:    0x6d4E52E450995271FBDB12a49b6ca795C2DfC21d
-   > block number:        24561881
-   > block timestamp:     1619776172
+   > contract address:    0x0b1F363Cd827D2Fafc2C0D5A4055881b56020BB1
+   > block number:        24678660
+   > block timestamp:     1620251056
    > account:             0x67256aB8E993Ed8647CBc4723883F4936058dfF2
-   > balance:             28.310983522020037726
+   > balance:             32.001142220070037723
    > gas used:            244568 (0x3bb58)
    > gas price:           20 gwei
    > value sent:          0 ETH
    > total cost:          0.00489136 ETH
 
 
-   Deploying 'PriceFeed'
+   Replacing 'PriceFeed'
    ---------------------
-   > transaction hash:    0xe28a8c56a1b2af1698334802e4e73e76d4b2f21e54a0a7d557cde25f48283189
-   > Blocks: 2            Seconds: 4
-   > contract address:    0xd8e211FA89bd705Ebe17eF799df1ec13b25d6072
-   > block number:        24561883
-   > block timestamp:     1619776180
+   > transaction hash:    0x34f481bed8befc9f353d344eaf02b3fba4e5ca3ebcbff27f7cda9e167830b751
+   > Blocks: 1            Seconds: 4
+   > contract address:    0x07652100D87e507f9A536D9F39D35f737c7657D6
+   > block number:        24678662
+   > block timestamp:     1620251064
    > account:             0x67256aB8E993Ed8647CBc4723883F4936058dfF2
-   > balance:             28.302668602020037726
+   > balance:             31.992827300070037723
    > gas used:            415746 (0x65802)
    > gas price:           20 gwei
    > value sent:          0 ETH
    > total cost:          0.00831492 ETH
 
 
-   Deploying 'EternalBattle'
+   Replacing 'EternalBattle'
    -------------------------
-   > transaction hash:    0x9344e05608d5247d654a5ff1048bf3671d8d08471cde40017ecaefef1a9b0a8c
-   > Blocks: 2            Seconds: 8
-   > contract address:    0x78666A3204C8FA4e98c94e1178118097dc6c1f24
-   > block number:        24561886
-   > block timestamp:     1619776192
+   > transaction hash:    0x0a8a487ec8f9d42f9d4092fcc1dc47f4b4f0f9284596fbd1d0284784be8e87e8
+   > Blocks: 1            Seconds: 8
+   > contract address:    0xedD3Dc3015141dfebC7eDB32F58A6a922C2Bb23c
+   > block number:        24678665
+   > block timestamp:     1620251076
    > account:             0x67256aB8E993Ed8647CBc4723883F4936058dfF2
-   > balance:             28.279180802020037726
-   > gas used:            1174390 (0x11eb76)
+   > balance:             31.968947700070037723
+   > gas used:            1193980 (0x1237fc)
    > gas price:           20 gwei
    > value sent:          0 ETH
-   > total cost:          0.0234878 ETH
+   > total cost:          0.0238796 ETH
+
+
+   > Saving migration to chain.
+   > Saving artifacts
+   -------------------------------------
+   > Total cost:          0.09582544 ETH
