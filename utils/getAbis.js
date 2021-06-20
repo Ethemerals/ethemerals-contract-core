@@ -11,6 +11,16 @@ const main = async () => {
   await writeJsonFile('./abi/Ethemerals.json', Ethemerals.abi);
   await writeJsonFile('./abi/EternalBattle.json', EternalBattle.abi);
   await writeJsonFile('./abi/PriceFeed.json', PriceFeed.abi);
+
+  const addresses = [{
+    EthemeralLifeForce: EthemeralLifeForce.networks['42'].address,
+    Ethemerals: Ethemerals.networks['42'].address,
+    EternalBattle: EternalBattle.networks['42'].address,
+    PriceFeed: PriceFeed.networks['42'].address,
+  }]
+
+  await writeJsonFile('./abi/Addresses.json', addresses);
 }
 
 main();
+

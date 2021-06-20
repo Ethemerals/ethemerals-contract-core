@@ -11,7 +11,6 @@ interface IEthemerals {
   function ownerOf(uint256 _tokenId) external view returns (address);
   function changeScore(uint _tokenId, uint offset, bool add, uint amount) external;
   function getCoinScore(uint _tokenId) external view returns (uint256);
-  function mintPrice() external view returns (uint256);
 }
 
 interface IPriceFeed {
@@ -20,10 +19,10 @@ interface IPriceFeed {
 
 contract EternalBattle is ERC721Holder {
 
-  event StakeCreated (uint indexed tokenId, address indexed owner, uint priceFeedId);
-  event StakeCanceled (uint indexed tokenId, address indexed owner, uint priceFeedId);
-  event TokenRevived (uint indexed tokenId, bool indexed reap, address indexed reviverOwner, uint reviver);
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+  event StakeCreated (uint indexed tokenId, address owner, uint priceFeedId);
+  event StakeCanceled (uint indexed tokenId, address owner, bool win);
+  event TokenRevived (uint indexed tokenId, bool reap, uint reviver, address reviverOwner);
+  event OwnershipTransferred(address previousOwner, address newOwner);
 
 
   struct Stake {
@@ -64,7 +63,7 @@ contract EternalBattle is ERC721Holder {
     (uint change, bool win) = getChange(_id);
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
     nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
-    emit StakeCanceled(_id, msg.sender, stakes[_id].priceFeedId);
+    emit StakeCanceled(_id, msg.sender, win);
   }
 
   function reviveToken(uint _id0, uint _id1, bool reap) external {
@@ -76,7 +75,7 @@ contract EternalBattle is ERC721Holder {
     nftContract.safeTransferFrom(address(this), reap ? msg.sender : stakes[_id0].owner, _id0); // take owne0rship or return ownership
     nftContract.changeScore(_id0, scoreBefore - 50, false, participationReward); // revive with 50 hp
     nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? participationReward : reviverTokenReward); // reaper minus 2x points and add rewards
-    emit TokenRevived(_id0, reap, msg.sender, _id1);
+    emit TokenRevived(_id0, reap, _id1, msg.sender);
   }
 
   function getChange(uint _tokenId) public view returns (uint, bool) {
@@ -99,7 +98,7 @@ contract EternalBattle is ERC721Holder {
 
   function cancelStakeAdmin(uint _id) external onlyAdmin() { //admin
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
-    emit StakeCanceled(_id, stakes[_id].owner, stakes[_id].priceFeedId);
+    emit StakeCanceled(_id, stakes[_id].owner, false);
   }
 
   function setReviverRewards(uint _score, uint _token) external onlyAdmin() { //admin

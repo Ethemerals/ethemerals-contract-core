@@ -4,47 +4,54 @@ pragma solidity ^0.8.3;
 
 // 0x4D0C7e0A2267eBa101A99F6CE39A226E8Ef54bB1
 
-interface IUniswapV2Router01 {
-    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
+interface UniV3SpotPrice {
+    function getSpotPrice(address pool, uint32 period, uint128 baseAmount, address baseToken, address quoteToken) external view returns(uint256 quoteAmount);
 }
+
 
 contract PriceFeed {
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event FeedAdded(address pool, address baseToken, address quoteToken, uint32 id);
 
-    IUniswapV2Router01 uniswap;
+    UniV3SpotPrice uniswap;
 
     struct PricePair {
-        address token0;
-        address token1;
-        uint amount;
+        address pool;
+        uint32 period;
+        uint128 baseAmount;
+        address baseToken;
+        address quoteToken;
     }
 
     address admin;
 
-    mapping (uint => PricePair) private priceFeeds;
+    mapping (uint32 => PricePair) private priceFeeds;
 
-    constructor(address uniswapAddress) {
+    constructor(address UniV3SpotPriceAddress) {
         admin = msg.sender;
-        uniswap = IUniswapV2Router01(uniswapAddress); // use MOCK for kovan
+        uniswap = UniV3SpotPrice(UniV3SpotPriceAddress); // use MOCK for kovan
     }
 
-    function getPrice(uint _id) external view returns (uint) {
-        address[] memory path = new address[](2);
-        path[0] = priceFeeds[_id].token0;
-        path[1] = priceFeeds[_id].token1;
-        uint[] memory outs = uniswap.getAmountsOut(priceFeeds[_id].amount, path);
-        return outs[1];
+    function getPrice(uint32 _id) external view returns (uint) {
+        return uniswap.getSpotPrice(
+          priceFeeds[_id].pool,
+          priceFeeds[_id].period,
+          priceFeeds[_id].baseAmount,
+          priceFeeds[_id].baseToken,
+          priceFeeds[_id].quoteToken
+        );
     }
 
-    function addFeed(address _token0, address _token1, uint _amount, uint _id) external {
+    function addFeed(address _pool, uint32 _period, uint128 _baseAmount, address _baseToken, address _quoteToken, uint32 _id) external {
         require(msg.sender == admin, 'admin only');
-        priceFeeds[_id] = PricePair(_token0, _token1, _amount);
+        priceFeeds[_id] = PricePair(_pool, _period, _baseAmount, _baseToken, _quoteToken);
+        emit FeedAdded(_pool, _baseToken, _quoteToken, _id);
     }
 
-    function updateUniswap(address uniswapAddress) external {
+    function updateUniswap(address UniV3SpotPriceAddress) external {
         require(msg.sender == admin, 'admin only');
-        uniswap = IUniswapV2Router01(uniswapAddress);
+        uniswap = UniV3SpotPrice(UniV3SpotPriceAddress);
     }
 
     function transferOwnership(address newAdmin) external {

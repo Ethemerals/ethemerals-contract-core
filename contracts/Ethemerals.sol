@@ -11,18 +11,17 @@ import "../openzep/token/ERC20/IERC20.sol";
 //3000000 gas limit
 // "https://d1b1rc939omrh2.cloudfront.net/api/meta/", "https://d1b1rc939omrh2.cloudfront.net/api/contract", CryptoCoinsTokens.address, "CryptoCoins", "CCN");
 
-
+// TODO add statmaster
 
 contract Ethemerals is ERC721 {
 
-    event ChangeScore(uint id, uint score, bool add, uint rewards);
+    event ChangeScore(uint indexed tokenId, uint score, bool add, uint rewards);
     event OwnershipTransferred(address previousOwner, address newOwner);
-    event GameMasterChange(address gm, bool add);
-    event MinterChange(address minter, bool add);
-    event PriceChange(uint price, bool eth);
-    event Resurrection(uint id, bool eth);
-    event Redemption(uint id, bool fromToken);
-    event DisallowDelegatesChange(address user, bool disallow);
+    event DelegateChange(address indexed delegate, bool add);
+    event PriceChange(uint price, bool inEth);
+    event Resurrection(uint tokenId, bool inEth);
+    event Redemption(uint tokenId, bool fromToken);
+    event DisallowDelegatesChange(address indexed user, bool disallow);
 
     // NFT ID range 1-4209
     // Bosses: 1, 2, 3, 4, 5, 6, 7,W 8, 9
@@ -59,8 +58,7 @@ contract Ethemerals is ERC721 {
     mapping (uint => Coin[]) private coinEditions;
 
     // access control
-    mapping (address => bool) private gameMasters;
-    mapping (address => bool) private minters;
+    mapping (address => bool) private delegates;
     mapping (address => bool) private disallowDelegates; // default allows, user needs to disallow
 
     string private _uri;
@@ -69,7 +67,6 @@ contract Ethemerals is ERC721 {
 
     constructor(string memory tUri, string memory cUri, address _tokenAddress, string memory name, string memory symbol) ERC721(name, symbol) {
       admin = msg.sender;
-      minters[msg.sender] = true;
       _uri = tUri;
       contractUri = cUri;
       tokenAddress = _tokenAddress;
@@ -78,7 +75,7 @@ contract Ethemerals is ERC721 {
 
 
     function mint(address to, uint256 id) public virtual {
-      require(minters[msg.sender] == true, "minter only");
+      require(delegates[msg.sender] == true, "delegates only");
       _mint(to, id);
     }
 
@@ -128,7 +125,7 @@ contract Ethemerals is ERC721 {
 
     //Require GAMEMASTER
     function changeScore(uint _tokenId, uint offset, bool add, uint amount) external {
-      require(gameMasters[msg.sender] == true, "gm only");
+      require(delegates[msg.sender] == true, "delegates only");
       _changeScore(_tokenId, offset,  add, amount);
     }
 
@@ -236,15 +233,9 @@ contract Ethemerals is ERC721 {
     }
 
 
-    function addGameMaster(address _gm, bool add) external onlyAdmin() { //admin
-      gameMasters[_gm] = add;
-      emit GameMasterChange(_gm, add);
-    }
-
-
-    function addMinter(address _minter, bool add) external onlyAdmin() { //admin
-      minters[_minter] = add;
-      emit MinterChange(_minter, add);
+    function addDelegate(address _delegate, bool add) external onlyAdmin() { //admin
+      delegates[_delegate] = add;
+      emit DelegateChange(_delegate, add);
     }
 
 
@@ -299,7 +290,7 @@ contract Ethemerals is ERC721 {
      * white list for game masters and auction house
      */
     function isApprovedForAll(address owner, address operator) public view override returns (bool) {
-      if (!disallowDelegates[owner] && (gameMasters[operator] == true)) {
+      if (!disallowDelegates[owner] && (delegates[operator] == true)) {
         return true;
       }
 

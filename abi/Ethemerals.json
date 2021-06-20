@@ -90,13 +90,13 @@
 				"type": "uint256"
 			},
 			{
-				"indexed": true,
+				"indexed": false,
 				"internalType": "uint256",
 				"name": "score",
 				"type": "uint256"
 			},
 			{
-				"indexed": true,
+				"indexed": false,
 				"internalType": "bool",
 				"name": "add",
 				"type": "bool"
@@ -117,7 +117,7 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "gm",
+				"name": "delegate",
 				"type": "address"
 			},
 			{
@@ -127,7 +127,7 @@
 				"type": "bool"
 			}
 		],
-		"name": "GameMasterChange",
+		"name": "DelegateChange",
 		"type": "event"
 	},
 	{
@@ -136,36 +136,93 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "minter",
+				"name": "user",
 				"type": "address"
 			},
 			{
 				"indexed": false,
 				"internalType": "bool",
-				"name": "add",
+				"name": "disallow",
 				"type": "bool"
 			}
 		],
-		"name": "MinterChange",
+		"name": "DisallowDelegatesChange",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
+				"indexed": false,
 				"internalType": "address",
 				"name": "previousOwner",
 				"type": "address"
 			},
 			{
-				"indexed": true,
+				"indexed": false,
 				"internalType": "address",
 				"name": "newOwner",
 				"type": "address"
 			}
 		],
 		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "price",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "inEth",
+				"type": "bool"
+			}
+		],
+		"name": "PriceChange",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "fromToken",
+				"type": "bool"
+			}
+		],
+		"name": "Redemption",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "inEth",
+				"type": "bool"
+			}
+		],
+		"name": "Resurrection",
 		"type": "event"
 	},
 	{
@@ -653,22 +710,14 @@
 				"internalType": "uint256",
 				"name": "_price",
 				"type": "uint256"
-			}
-		],
-		"name": "setMintPrice",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
+			},
 			{
-				"internalType": "uint256",
-				"name": "_price",
-				"type": "uint256"
+				"internalType": "bool",
+				"name": "inEth",
+				"type": "bool"
 			}
 		],
-		"name": "setReviveTokenPrice",
+		"name": "setPrice",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -677,7 +726,7 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_gm",
+				"name": "_delegate",
 				"type": "address"
 			},
 			{
@@ -686,25 +735,7 @@
 				"type": "bool"
 			}
 		],
-		"name": "addGameMaster",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_minter",
-				"type": "address"
-			},
-			{
-				"internalType": "bool",
-				"name": "add",
-				"type": "bool"
-			}
-		],
-		"name": "addMinter",
+		"name": "addDelegate",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
