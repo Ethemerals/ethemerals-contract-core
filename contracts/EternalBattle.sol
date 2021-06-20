@@ -41,6 +41,8 @@ contract EternalBattle is ERC721Holder {
   uint private participationReward = 100*10**18; //100 tokens
   address private admin;
 
+  uint public testValue;
+
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
 

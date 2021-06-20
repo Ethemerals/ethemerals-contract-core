@@ -4,17 +4,16 @@ pragma solidity ^0.8.3;
 
 // 0x4D0C7e0A2267eBa101A99F6CE39A226E8Ef54bB1
 
-interface UniV3SpotPrice {
+interface IUniV3Oracle {
     function getSpotPrice(address pool, uint32 period, uint128 baseAmount, address baseToken, address quoteToken) external view returns(uint256 quoteAmount);
 }
-
 
 contract PriceFeed {
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event FeedAdded(address pool, address baseToken, address quoteToken, uint32 id);
 
-    UniV3SpotPrice uniswap;
+    IUniV3Oracle uniswap;
 
     struct PricePair {
         address pool;
@@ -26,14 +25,14 @@ contract PriceFeed {
 
     address admin;
 
-    mapping (uint32 => PricePair) private priceFeeds;
+    mapping (uint => PricePair) private priceFeeds;
 
     constructor(address UniV3SpotPriceAddress) {
         admin = msg.sender;
-        uniswap = UniV3SpotPrice(UniV3SpotPriceAddress); // use MOCK for kovan
+        uniswap = IUniV3Oracle(UniV3SpotPriceAddress); // use MOCK for kovan
     }
 
-    function getPrice(uint32 _id) external view returns (uint) {
+    function getPrice(uint _id) external view returns (uint) {
         return uniswap.getSpotPrice(
           priceFeeds[_id].pool,
           priceFeeds[_id].period,
@@ -51,7 +50,7 @@ contract PriceFeed {
 
     function updateUniswap(address UniV3SpotPriceAddress) external {
         require(msg.sender == admin, 'admin only');
-        uniswap = UniV3SpotPrice(UniV3SpotPriceAddress);
+        uniswap = IUniV3Oracle(UniV3SpotPriceAddress);
     }
 
     function transferOwnership(address newAdmin) external {

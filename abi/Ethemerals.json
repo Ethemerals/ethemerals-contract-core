@@ -86,7 +86,7 @@
 			{
 				"indexed": true,
 				"internalType": "uint256",
-				"name": "id",
+				"name": "tokenId",
 				"type": "uint256"
 			},
 			{
@@ -193,7 +193,7 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "id",
+				"name": "tokenId",
 				"type": "uint256"
 			},
 			{
@@ -212,7 +212,7 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "id",
+				"name": "tokenId",
 				"type": "uint256"
 			},
 			{
@@ -285,8 +285,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -305,8 +304,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -319,8 +317,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -333,8 +330,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -353,8 +349,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -367,8 +362,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -456,8 +450,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -470,8 +463,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -490,8 +482,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -527,8 +518,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -541,8 +531,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -555,8 +544,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -581,8 +569,7 @@
 		"name": "buy",
 		"outputs": [],
 		"stateMutability": "payable",
-		"type": "function",
-		"payable": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -649,8 +636,7 @@
 		"name": "resurrectWithEth",
 		"outputs": [],
 		"stateMutability": "payable",
-		"type": "function",
-		"payable": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -803,8 +789,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -817,8 +802,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -854,8 +838,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -874,8 +857,7 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -899,7 +881,6 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function",
-		"constant": true
+		"type": "function"
 	}
 ]

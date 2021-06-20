@@ -8,10 +8,6 @@ import "../openzep/token/ERC20/IERC20.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol";
 
-//3000000 gas limit
-// "https://d1b1rc939omrh2.cloudfront.net/api/meta/", "https://d1b1rc939omrh2.cloudfront.net/api/contract", CryptoCoinsTokens.address, "CryptoCoins", "CCN");
-
-// TODO add statmaster
 
 contract Ethemerals is ERC721 {
 
