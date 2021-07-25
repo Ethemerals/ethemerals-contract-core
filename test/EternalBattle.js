@@ -107,6 +107,37 @@ contract('ERC721', (accounts) => {
 		assert(owner === player1);
 	});
 
+	it('should get and calculate stake and bps', async () => {
+		await cct.transfer(game.address, web3.utils.toWei('420000000'));
+
+		await game.addDelegate(gm.address, true);
+		await addFeed(1);
+
+		await updatePriceCustom('3489425374');
+
+		await game.setAvailableCoin(1);
+		await game.setPrice(web3.utils.toWei('1'), true);
+		await game.buy({ from: player1, value: web3.utils.toWei('1') });
+
+		await gm.createStake(10, 1, 10000, true, { from: player1 });
+		await time.increase(20);
+		token = await game.getCoinById(10);
+		stake = await gm.getStake(10);
+		console.log(stake.toString());
+
+		await updatePriceCustom('3839000074');
+		await time.increase(20);
+		bps = await gm.calcBps('3489425374', '3449425374');
+		change = await gm.getChange(10);
+		console.log(bps.toString());
+		console.log(change.toString());
+		console.log(token.toString());
+
+		await gm.cancelStake(10, { from: player1 });
+		token = await game.getCoinById(10);
+		console.log(token.toString());
+	});
+
 	it('should stake and unstake and get bps', async () => {
 		await cct.transfer(game.address, web3.utils.toWei('420000000'));
 		await game.addDelegate(gm.address, true);

@@ -6,9 +6,13 @@ const PriceFeed = artifacts.require('PriceFeed');
 
 const nftAddress = '0xcD9AdEEf8b68C61984348B2F379bA38b8Bd9BbF9'; // KOVAN
 
+// module.exports = async function (deployer) {
+// 	await deployer.deploy(Ethemerals, 'https://api.ethemerals.com/api/', 'https://api.ethemerals.com/api/contract', EthemeralLifeForce.address, 'Ethemerals', 'KOTE');
+// 	await deployer.deploy(UniV3Oracle);
+// 	await deployer.deploy(PriceFeed, UniV3Oracle.address); // CHANGE TO MAINNET ADDRESS
+// 	await deployer.deploy(EternalBattle, Ethemerals.address, PriceFeed.address);
+// };
+
 module.exports = async function (deployer) {
-	await deployer.deploy(Ethemerals, 'https://api.ethemerals.com/api/', 'https://api.ethemerals.com/api/contract', EthemeralLifeForce.address, 'Ethemerals', 'ETHEM');
-	await deployer.deploy(UniV3Oracle);
-	await deployer.deploy(PriceFeed, UniV3Oracle.address); // CHANGE TO MAINNET ADDRESS
-	await deployer.deploy(EternalBattle, Ethemerals.address, PriceFeed.address);
+	await deployer.deploy(EternalBattle, '0xcD9AdEEf8b68C61984348B2F379bA38b8Bd9BbF9', '0x1e704437f1323FDA08358cedf5a3f9619fA11fc1');
 };

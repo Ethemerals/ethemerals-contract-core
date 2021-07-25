@@ -19,8 +19,8 @@ interface IPriceFeed {
 
 contract EternalBattle is ERC721Holder {
 
-  event StakeCreated (uint indexed tokenId, address owner, uint priceFeedId);
-  event StakeCanceled (uint indexed tokenId, address owner, bool win);
+  event StakeCreated (uint indexed tokenId, uint priceFeedId, bool long);
+  event StakeCanceled (uint indexed tokenId, bool win);
   event TokenRevived (uint indexed tokenId, bool reap, uint reviver, address reviverOwner);
   event OwnershipTransferred(address previousOwner, address newOwner);
 
@@ -41,8 +41,6 @@ contract EternalBattle is ERC721Holder {
   uint private participationReward = 100*10**18; //100 tokens
   address private admin;
 
-  uint public testValue;
-
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
 
@@ -56,7 +54,7 @@ contract EternalBattle is ERC721Holder {
     require(_position > 0 && _position <= 20000); // TURN OFF FOR MOCK TODO
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
     stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _position, long);
-    emit StakeCreated(_tokenId, msg.sender, _priceFeedId);
+    emit StakeCreated(_tokenId, _priceFeedId, long);
   }
 
   function cancelStake(uint _id) external {
@@ -65,7 +63,7 @@ contract EternalBattle is ERC721Holder {
     (uint change, bool win) = getChange(_id);
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
     nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
-    emit StakeCanceled(_id, msg.sender, win);
+    emit StakeCanceled(_id, win);
   }
 
   function reviveToken(uint _id0, uint _id1, bool reap) external {
@@ -100,7 +98,7 @@ contract EternalBattle is ERC721Holder {
 
   function cancelStakeAdmin(uint _id) external onlyAdmin() { //admin
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
-    emit StakeCanceled(_id, stakes[_id].owner, false);
+    emit StakeCanceled(_id, false);
   }
 
   function setReviverRewards(uint _score, uint _token) external onlyAdmin() { //admin
