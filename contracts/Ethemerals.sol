@@ -19,48 +19,65 @@ contract Ethemerals is ERC721 {
     event Redemption(uint tokenId, bool fromToken);
     event DisallowDelegatesChange(address indexed user, bool disallow);
 
-    // NFT ID range 1-4209
-    // Bosses: 1, 2, 3, 4, 5, 6, 7,W 8, 9
+    // NFT ID range 1-4700
+    // SPECIALS: 1, 2, 3, 4, 5, 6, 7, 8, 9
     // Bitcoin: starts at 10-19
-    // Last Coin ranked ends at 420 IDs 4209
-    // NFT Art at 5000
-    // Total Characters
-    // items start at 7000
+    // Last Coin ranked ends at 469 last ID 4699
+    // NFT Art at 7000
+    // items start at 10000
 
+    // Basic minimal struct for an Ethemeral, addon contracts for inventory and stats
     struct Coin {
       uint id;
       uint score;
       uint rewards;
     }
 
-    // rewards token address
-    address private tokenAddress;
+    string private contractUri;
+    string private _uri;
+
     address private admin;
 
-    string private contractUri;
+    // ELF ERC20 address
+    address private tokenAddress;
 
-    // ranking rewards
+    // Nonce used in random function
     uint private nonce;
+
+    // Multiplier on percentage tax on rewards
     uint public winnerMult = 1;
+
+    // Total ELF available for winningCoin
     uint public winnerFunds;
+
+    // Coin with highest score
     uint public winningCoin;
+
+    // Mint price in ETH / Revive price in ETH
     uint public mintPrice = 100*10**18;
+
+    // Revive price in ELF
     uint public revivePrice = 1000*10**18; //1000 tokens
 
     // iterable array of available classes
     uint[] private availableCoins;
 
-    // mapping of classes to edition (holds all the classes and editions)
+    // Mapping of Coin Classes to Edition (holds all the Ethemerals)
     mapping (uint => Coin[]) private coinEditions;
 
-    // access control
+    // Delegates include game masters and auction houses
     mapping (address => bool) private delegates;
-    mapping (address => bool) private disallowDelegates; // default allows, user needs to disallow
 
-    string private _uri;
+    // Default to allows for better UX. User needs to disallow
+    mapping (address => bool) private disallowDelegates;
 
 
-
+    /**
+     * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
+     * tUri - base uri of token metadata
+     * cUri - contract metadata for opensea.io
+     * _tokenAddress - ELF ERC20 contract
+     */
     constructor(string memory tUri, string memory cUri, address _tokenAddress, string memory name, string memory symbol) ERC721(name, symbol) {
       admin = msg.sender;
       _uri = tUri;
@@ -69,19 +86,32 @@ contract Ethemerals is ERC721 {
       emit OwnershipTransferred(address(0), msg.sender);
     }
 
-
+    /**
+     * @dev Mints a token of id to address
+     * WARNING: Calling directly by passes any metadata creation
+     */
     function mint(address to, uint256 id) public virtual {
       require(delegates[msg.sender] == true, "delegates only");
       _mint(to, id);
     }
 
-    // buys a random token from available class
+    /**
+     * @dev Buys a random Ethemeral from available classes
+     * Requirements: value >= mint price
+     * Calls internal _mintAvailableToken
+     */
     function buy() payable external {
       require(msg.value >= mintPrice || (IERC20(tokenAddress).balanceOf(msg.sender) >= 2000*10**18 && msg.value >= (mintPrice - mintPrice/4)), "not enough"); // discount 2000 rewards
       _mintAvailableToken(msg.sender);
     }
 
-
+    /**
+     * @dev Checks for available Ethemeral and mints
+     * Requirements: Available coins
+     * Calls internal _mint
+     * Adds to Ethemeral to coinEditions
+     * Calls internal _reduceAvailableCoins if coin edition >= 10, caller pays extra gas
+     */
     function _mintAvailableToken(address to) private {
       uint randCoinClass;
       uint edition;
@@ -105,7 +135,9 @@ contract Ethemerals is ERC721 {
       revert("no more");
     }
 
-
+    /**
+     * @dev Removes the coin of the available coins list
+     */
     function _reduceAvailableCoins(uint coinToRemove) private {
       uint[] memory newAvailableCoins = new uint[](availableCoins.length - 1);
       uint j;
@@ -119,12 +151,24 @@ contract Ethemerals is ERC721 {
     }
 
 
-    //Require GAMEMASTER
+
+    /**
+     * @dev Changes '_tokenId' score by 'offset' amount either 'add' or reduce. Adds 'amount' of ELF rewards
+     * Requirements: Caller must be delegate
+     * Calls internal _changeScore
+     */
     function changeScore(uint _tokenId, uint offset, bool add, uint amount) external {
       require(delegates[msg.sender] == true, "delegates only");
       _changeScore(_tokenId, offset,  add, amount);
     }
 
+    /**
+     * @dev Changes '_tokenId' score by 'offset' amount either 'add' or reduce. Adds 'amount' of ELF rewards
+     * checks for winning coin change
+     * clamps score > 0 and <= 1000
+     * clamps ELF rewards amounts to something reasonable
+     * increases winning fund and increases percentage rate based on nonce (increases with more transactions)
+     */
     function _changeScore(uint _tokenId, uint offset, bool add, uint amount) internal {
       require(_exists(_tokenId), "not exist");
       Coin storage tokenCurrent = coinEditions[_tokenId / 10][_tokenId % 10];
@@ -156,13 +200,15 @@ contract Ethemerals is ERC721 {
       uint fundAmount = amountClamped * 200 * winnerMult / 10000;
       winnerFunds += fundAmount;
 
-
       nonce++;
       emit ChangeScore(_tokenId, newScore, add, amountClamped);
     }
 
 
-    //redeem erc20 tokens
+    /**
+     * @dev redeems ELF tokens from the '_tokenId' Ethemeral, reducing Ethemerals rewards to zero
+     * Requirements: token owner, this contract has funds
+     */
     function redeemTokens(uint _tokenId) external {
       require(ownerOf(_tokenId) == msg.sender,  'owner only');
       uint amount = coinEditions[_tokenId / 10][_tokenId % 10].rewards;
@@ -171,7 +217,13 @@ contract Ethemerals is ERC721 {
       emit Redemption(_tokenId, true);
     }
 
-
+    /**
+     * @dev redeems ELF tokens from the winning fund
+     * Requirements:
+     * - token owner
+     * - tokenId is winning coin
+     * - this contract has funds
+     */
     function redeemWinnerFunds(uint _tokenId) external {
       require(ownerOf(_tokenId) == msg.sender,  'owner only');
       require(coinEditions[winningCoin / 10][winningCoin % 10].id == _tokenId, 'winner only');
@@ -184,25 +236,41 @@ contract Ethemerals is ERC721 {
       emit Redemption(_tokenId, false);
     }
 
-
+    /**
+     * @dev resets '_id' Ethemeral score to 200, and adds 1000 ELF
+     * Anyone can call
+     * Requirements:
+     * - token score needs to be close to 0
+     * - ETH sent needs to be more then mint price
+     */
     function resurrectWithEth(uint _id) external payable {
-      require(coinEditions[_id / 10][_id % 10].score <= 25, 'not dead');
+      require(coinEditions[_id / 10][_id % 10].score <= 50, 'not dead');
       require(msg.value >= mintPrice, 'not enough');
-      _changeScore(_id, 100, true, 100*10**18); // revive with 100 & 100 rewards
+      _changeScore(_id, 200, true, 1000*10**18); // revive with 200 & 1000 rewards
       emit Resurrection(_id, true);
     }
 
+    /**
+     * @dev resets '_id' Ethemeral score to 200, and adds 1000 ELF
+     * Anyone can call
+     * Requirements:
+     * - token score needs to be close to 0
+     * - ELF sent needs to be more then revive price
+     */
     function resurrectWithToken(uint _id) external {
-      require(coinEditions[_id / 10][_id % 10].score <= 25, 'not dead');
+      require(coinEditions[_id / 10][_id % 10].score <= 50, 'not dead');
       require(IERC20(tokenAddress).balanceOf(msg.sender) >= revivePrice , 'not enough');
       if(IERC20(tokenAddress).transferFrom(msg.sender, address(this), revivePrice)){
-        _changeScore(_id, 100, true, 100*10**18); // revive with 100 & 100 rewards
+        _changeScore(_id, 200, true, 1000*10**18); // revive with 200 & 1000 rewards
         emit Resurrection(_id, false);
       }
     }
 
-
-    function setDisallowDelegates(bool disallow) external { // setting true will disallow delegates
+    /**
+     * @dev Set or unset delegates
+     * setting true will disallow delegates
+     */
+    function setDisallowDelegates(bool disallow) external {
       disallowDelegates[msg.sender] = disallow;
       emit DisallowDelegatesChange(msg.sender, disallow);
     }
@@ -283,7 +351,7 @@ contract Ethemerals is ERC721 {
 
     /**
      * @dev See {IERC721-isApprovedForAll}.
-     * white list for game masters and auction house
+     * White list for game masters and auction house
      */
     function isApprovedForAll(address owner, address operator) public view override returns (bool) {
       if (!disallowDelegates[owner] && (delegates[operator] == true)) {
@@ -292,8 +360,6 @@ contract Ethemerals is ERC721 {
 
       return super.isApprovedForAll(owner, operator);
     }
-
-
 
     modifier onlyAdmin() {
       require(msg.sender == admin, 'admin only');
