@@ -40,10 +40,10 @@ contract('ERC721', (accounts) => {
 		await game.mintReserve();
 		value = await game.maxAvailableEthemerals();
 
-		await expectRevert(game.setMaxAvailableEthemerals(10001, { from: admin }), 'max supply');
-		await game.setMaxAvailableEthemerals(10000, { from: admin });
+		await expectRevert(game.setMaxAvailableEthemerals(10002, { from: admin }), 'max supply');
+		await game.setMaxAvailableEthemerals(10001, { from: admin });
 		value = await game.maxAvailableEthemerals();
-		assert(value.toNumber() === 10000);
+		assert(value.toNumber() === 10001);
 	});
 
 	it('should transferOwnership', async () => {
@@ -123,8 +123,8 @@ contract('ERC721', (accounts) => {
 
 		value = await game.ethemeralSupply();
 		console.log(value.toNumber());
-
-		while (value.toNumber() < 100) {
+		let mintAmount = 100;
+		while (value.toNumber() < mintAmount) {
 			await game.mintEthemeral(1, player2, { from: player2, value: web3.utils.toWei('0.0001') });
 			value = await game.ethemeralSupply();
 			console.log(value.toNumber());
@@ -145,9 +145,10 @@ contract('ERC721', (accounts) => {
 		}
 
 		console.log(atk, def, spd);
+		console.log(atk / mintAmount, def / mintAmount, spd / mintAmount);
 	});
 
-	it.only('should set MintPrice and discount price and buy at discount', async () => {
+	it('should set MintPrice and discount price and buy at discount', async () => {
 		await game.setPrice(web3.utils.toWei('0.1'), true, { from: admin });
 		await game.mintReserve();
 		await game.setMaxAvailableEthemerals(1000, { from: admin });
@@ -177,13 +178,14 @@ contract('ERC721', (accounts) => {
 		value = await web3.eth.getBalance(game.address);
 		assert(web3.utils.fromWei(value) == '5');
 
+		oldBalance = await web3.eth.getBalance(admin);
 		await game.withdraw(admin);
 
 		value = await web3.eth.getBalance(game.address);
 		assert(web3.utils.fromWei(value) == '0');
 
-		value = await web3.eth.getBalance(admin);
-		assert(parseFloat(web3.utils.fromWei(value)) > 99);
+		newBalance = await web3.eth.getBalance(admin);
+		assert(parseFloat(web3.utils.fromWei(newBalance)) > web3.utils.fromWei(oldBalance));
 	});
 
 	// it.only('should mint 10000 ethemerals', async () => {

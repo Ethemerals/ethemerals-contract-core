@@ -9,7 +9,7 @@ contract Ethemerals is ERC721 {
 
   event OwnershipTransferred(address previousOwner, address newOwner);
   event PriceChange(uint price, bool inEth);
-  event Mint(uint id, uint8 atk, uint8 def, uint8 spd);
+  event Mint(uint id, uint16 elf, uint8 atk, uint8 def, uint8 spd);
   event DelegateChange(address indexed delegate, bool add);
   event DisallowDelegatesChange(address indexed user, bool disallow);
 
@@ -19,7 +19,6 @@ contract Ethemerals is ERC721 {
 
   // Basic minimal struct for an Ethemeral, addon contracts for inventory and stats
   struct Meral {
-    uint16 cmId;
     uint16 score;
     uint16 rewards;
     uint8 atk;
@@ -34,7 +33,7 @@ contract Ethemerals is ERC721 {
   uint private nonce;
 
   // MAX SUPPLY
-  uint public maxEthemeralSupply = 10000; // #10000 last index
+  uint public maxEthemeralSupply = 10001; // #10000 last index
 
   // CURRENT SUPPLY
   uint public ethemeralSupply = 1; // #0 skipped
@@ -76,7 +75,7 @@ contract Ethemerals is ERC721 {
 
     // mint the #0 to fix the maths
     _safeMint(msg.sender, 0);
-    allEthemerals.push(Meral(0, 1000, startingELF, 100, 100, 100));
+    allEthemerals.push(Meral(1000, startingELF, 100, 100, 100));
   }
 
 
@@ -102,20 +101,25 @@ contract Ethemerals is ERC721 {
   function _mintEthemerals(uint amountMerals, address recipient) internal {
     for (uint i = 0; i < amountMerals; i++) {
       _safeMint(recipient, ethemeralSupply);
-      uint8 atk = uint8(_random(80, nonce + 123));
+      uint8 atk = uint8(_random(78, nonce + 123));
       nonce ++;
-      uint8 def = uint8(_random(100 - atk, nonce + atk));
-      uint8 spd = 100 - atk - def;
+      uint8 spd = uint8(_random(100 - atk, nonce * 2));
+      uint8 def = 100 - atk - spd;
       allEthemerals.push(Meral(
-        2099,
         300,
         startingELF,
-        atk < 5 ? 5 : atk,
-        def < 5 ? 5 : def,
-        spd < 5 ? 5 : spd
+        atk < 8 ? atk*2+1 : atk,
+        def < 8 ? def*2+1 : def,
+        spd < 8 ? spd*2+1 : spd
       ));
       ethemeralSupply ++;
-      emit Mint(ethemeralSupply, atk, def, spd);
+      emit Mint(
+        ethemeralSupply,
+        startingELF,
+        atk < 8 ? atk*2+1 : atk,
+        def < 8 ? def*2+1 : def,
+        spd < 8 ? spd*2+1 : spd
+      );
     }
   }
 
@@ -152,7 +156,7 @@ contract Ethemerals is ERC721 {
   }
 
   function setMaxAvailableEthemerals(uint _id) external onlyAdmin() { //admin
-    require(_id <= maxEthemeralSupply + 1, "max supply"); // +1
+    require(_id <= maxEthemeralSupply, "max supply"); // +1
     maxAvailableEthemerals = _id;
   }
 
