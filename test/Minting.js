@@ -31,11 +31,19 @@ contract('ERC721', (accounts) => {
 		await expectRevert(game.setPrice(10000, false, { from: player1 }), 'only admin');
 		await expectRevert(game.withdraw(admin, { from: player1 }), 'only admin');
 		await expectRevert(game.setMaxAvailableEthemerals(10, { from: player1 }), 'only admin');
-		await expectRevert(game.setMaxAvailablePet(10, { from: player1 }), 'only admin');
-		await expectRevert(game.setMaxAvailableRefugee(10, { from: player1 }), 'only admin');
 		await expectRevert(game.transferOwnership(player2, { from: player1 }), 'only admin');
 		await expectRevert(game.setBaseURI('whats up dog', { from: player1 }), 'only admin');
 		await expectRevert(game.setContractURI('whats up dog', { from: player1 }), 'only admin');
+	});
+
+	it('should not set max Ethemerals more then supply', async () => {
+		await game.mintReserve();
+		value = await game.maxAvailableEthemerals();
+
+		await expectRevert(game.setMaxAvailableEthemerals(10001, { from: admin }), 'max supply');
+		await game.setMaxAvailableEthemerals(10000, { from: admin });
+		value = await game.maxAvailableEthemerals();
+		assert(value.toNumber() === 10000);
 	});
 
 	it('should transferOwnership', async () => {
@@ -98,7 +106,17 @@ contract('ERC721', (accounts) => {
 		assert(value === player2);
 	});
 
-	it('should mint 100 ethemerals', async () => {
+	it('it Should mint a token to player1', async () => {
+		await game.mintReserve();
+		await game.setPrice(web3.utils.toWei('0.1'), true, { from: admin });
+		await game.setMaxAvailableEthemerals(11, { from: admin });
+		await game.mintEthemeral(1, player1, { from: admin, value: web3.utils.toWei('0.1') });
+
+		const owner = await game.ownerOf(6);
+		assert(owner === player1);
+	});
+
+	it.only('should mint 100 ethemerals and get ethemerals', async () => {
 		await game.setPrice(web3.utils.toWei('0.0001'), true, { from: admin });
 		await game.mintReserve();
 		await game.setMaxAvailableEthemerals(1000, { from: admin });
@@ -110,14 +128,62 @@ contract('ERC721', (accounts) => {
 			await game.mintEthemeral(1, player2, { from: player2, value: web3.utils.toWei('0.0001') });
 			value = await game.ethemeralSupply();
 			console.log(value.toNumber());
-			await time.increase(60);
+			await time.increase(120);
 		}
+
+		let atk = 0;
+		let def = 0;
+		let spd = 0;
 
 		for (let i = 0; i < value.toNumber(); i++) {
 			meral = await game.getEthemeral(i);
 			console.log(meral.toString());
 			console.log('total', parseInt(meral[2]) + parseInt(meral[3]) + parseInt(meral[4]));
+			atk += parseInt(meral[2]);
+			def += parseInt(meral[3]);
+			spd += parseInt(meral[4]);
 		}
+
+		console.log(atk, def, spd);
+	});
+
+	it.only('should set MintPrice and discount price and buy at discount', async () => {
+		await game.setPrice(web3.utils.toWei('0.1'), true, { from: admin });
+		await game.mintReserve();
+		await game.setMaxAvailableEthemerals(1000, { from: admin });
+
+		await game.mintEthemeral(1, admin, { from: admin, value: web3.utils.toWei('0.08') });
+		owner = await game.ownerOf(6);
+		assert(owner === admin);
+
+		await game.mintEthemeral(5, admin, { from: admin, value: web3.utils.toWei('0.4') });
+		owner = await game.ownerOf(10);
+		assert(owner === admin);
+
+		await cct.transfer(player1, web3.utils.toWei('1000'), { from: admin });
+		await expectRevert(game.mintEthemeral(1, player1, { from: player1, value: web3.utils.toWei('0.08') }), 'not enough');
+
+		await game.setPrice(web3.utils.toWei('1000'), false);
+		await game.mintEthemeral(1, player1, { from: player1, value: web3.utils.toWei('0.08') });
+	});
+
+	it('should withdraw eth', async () => {
+		await game.setPrice(web3.utils.toWei('1'), true, { from: admin });
+		await game.mintReserve();
+		await game.setMaxAvailableEthemerals(1000, { from: admin });
+
+		await game.mintEthemeral(5, admin, { from: admin, value: web3.utils.toWei('5') });
+
+		value = await web3.eth.getBalance(game.address);
+		assert(web3.utils.fromWei(value) == '5');
+
+		await game.withdraw(admin);
+
+		value = await web3.eth.getBalance(game.address);
+		assert(web3.utils.fromWei(value) == '0');
+
+		value = await web3.eth.getBalance(admin);
+		assert(parseFloat(web3.utils.fromWei(value)) > 99);
 	});
 
 	// it.only('should mint 10000 ethemerals', async () => {

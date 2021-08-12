@@ -9,19 +9,19 @@ contract Ethemerals is ERC721 {
 
   event OwnershipTransferred(address previousOwner, address newOwner);
   event PriceChange(uint price, bool inEth);
+  event Mint(uint id, uint8 atk, uint8 def, uint8 spd);
   event DelegateChange(address indexed delegate, bool add);
   event DisallowDelegatesChange(address indexed user, bool disallow);
 
   // NFT TOKENOMICS
   // 1-1000 intial sale of 'Ethemerals'
   // max 10,000 Ethemerals
-  // 10,001 - 20,000 max available 'Pets'
-  // 20,001 - 30,000 max available 'Refugee'
 
   // Basic minimal struct for an Ethemeral, addon contracts for inventory and stats
   struct Meral {
-    uint score;
-    uint rewards;
+    uint16 cmId;
+    uint16 score;
+    uint16 rewards;
     uint8 atk;
     uint8 def;
     uint8 spd;
@@ -30,44 +30,37 @@ contract Ethemerals is ERC721 {
   string private contractUri;
   string private _uri;
 
-  // STARTING IDs
-  uint public PetsStartingId = 10001;
-  uint public RefugeeStartingId = 20001;
+  // Nonce used in random function
+  uint private nonce;
+
   // MAX SUPPLY
   uint public maxEthemeralSupply = 10000; // #10000 last index
-  uint public maxPetSupply = 10000; // #20000 last index
-  uint public maxRefugeeSupply = 10000; // #30000 last index
+
   // CURRENT SUPPLY
   uint public ethemeralSupply = 1; // #0 skipped
-  uint public petSupply;
-  uint public refugeeSupply;
 
   // AVAILABLE
   uint public maxPurchase = 5;
   uint public maxAvailableEthemerals;
-  uint public maxAvailablePet;
-  uint public maxAvailableRefugee;
+
 
   // Mint price in ETH
   uint public mintPrice = 100*10**18; // change once deployed
   // Min tokens needed for discount
   uint public discountMinTokens = 2000*10**18; // 2000 tokens
   // ELF at birth
-  uint public startingELF = 2000*10**18;
-
+  uint16 public startingELF = 2000; // need to * 10 ** 18
 
   address public admin;
 
   // ELF ERC20 address
   address public tokenAddress;
 
-  // Nonce used in random function
-  uint public nonce;
+  // iterable array of available cmIds
+  uint[] private availableCmIds;
 
   // Arrays of Ethemerals
   Meral[] public allEthemerals;
-  Meral[] public allPets;
-  Meral[] public allRefugees;
 
   // Delegates include game masters and auction houses
   mapping (address => bool) private delegates;
@@ -83,9 +76,8 @@ contract Ethemerals is ERC721 {
 
     // mint the #0 to fix the maths
     _safeMint(msg.sender, 0);
-    allEthemerals.push(Meral(1000, startingELF, 100, 100, 100));
+    allEthemerals.push(Meral(0, 1000, startingELF, 100, 100, 100));
   }
-
 
 
   /**
@@ -102,15 +94,20 @@ contract Ethemerals is ERC721 {
     _mintEthemerals(numOfTokens, recipient);
   }
 
+  /**
+  * @dev Mints an Ethemeral
+  * sets score and startingELF
+  * sets random [atk, def, spd]
+  */
   function _mintEthemerals(uint amountMerals, address recipient) internal {
     for (uint i = 0; i < amountMerals; i++) {
       _safeMint(recipient, ethemeralSupply);
-      uint8 atk = uint8(_random(90));
+      uint8 atk = uint8(_random(80, nonce + 123));
       nonce ++;
-      uint8 def = uint8(_random(95-atk));
-      nonce ++;
+      uint8 def = uint8(_random(100 - atk, nonce + atk));
       uint8 spd = 100 - atk - def;
       allEthemerals.push(Meral(
+        2099,
         300,
         startingELF,
         atk < 5 ? 5 : atk,
@@ -118,20 +115,10 @@ contract Ethemerals is ERC721 {
         spd < 5 ? 5 : spd
       ));
       ethemeralSupply ++;
+      emit Mint(ethemeralSupply, atk, def, spd);
     }
   }
 
-  function _mintPet(uint amountPets, address recipient) internal {
-    for (uint i = 0; i < amountPets; i++) {
-      _safeMint(recipient, PetsStartingId + petSupply);
-      petSupply ++;
-    }
-  }
-
-  function _mintRefugee(address recipient) internal {
-    _safeMint(recipient, RefugeeStartingId + refugeeSupply);
-    refugeeSupply ++;
-  }
 
   /**
   * @dev Set or unset delegates
@@ -165,15 +152,8 @@ contract Ethemerals is ERC721 {
   }
 
   function setMaxAvailableEthemerals(uint _id) external onlyAdmin() { //admin
+    require(_id <= maxEthemeralSupply + 1, "max supply"); // +1
     maxAvailableEthemerals = _id;
-  }
-
-  function setMaxAvailablePet(uint _id) external onlyAdmin() { //admin
-    maxAvailablePet = _id;
-  }
-
-  function setMaxAvailableRefugee(uint _id) external onlyAdmin() { //admin
-    maxAvailableRefugee = _id;
   }
 
   function addDelegate(address _delegate, bool add) external onlyAdmin() { //admin
@@ -195,10 +175,9 @@ contract Ethemerals is ERC721 {
   }
 
 
-
   // VIEW ONLY
-  function _random(uint max) private view returns(uint) {
-    return uint(keccak256(abi.encodePacked(nonce, block.number, block.difficulty, msg.sender))) % max;
+  function _random(uint max, uint _nonce) private view returns(uint) {
+    return uint(keccak256(abi.encodePacked(_nonce, block.number, block.difficulty, msg.sender))) % max;
   }
 
   function _baseURI() internal view override returns (string memory) {
