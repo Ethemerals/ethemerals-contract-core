@@ -4,14 +4,14 @@ pragma solidity ^0.8.3;
 
 import "../openzep/token/ERC721/ERC721.sol";
 import "../openzep/token/ERC20/IERC20.sol";
+import "../openzep/access/Ownable.sol";
 
-contract Ethemerals is ERC721 {
+contract Ethemerals is ERC721, Ownable {
 
-  event OwnershipTransferred(address previousOwner, address newOwner);
   event PriceChange(uint price, bool inEth);
   event Mint(uint id, uint16 elf, uint8 atk, uint8 def, uint8 spd);
   event DelegateChange(address indexed delegate, bool add);
-  event DisallowDelegatesChange(address indexed user, bool disallow);
+  event AllowDelegatesChange(address indexed user, bool allow);
 
   // NFT TOKENOMICS
   // 1-1000 intial sale of 'Ethemerals'
@@ -33,49 +33,48 @@ contract Ethemerals is ERC721 {
   uint private nonce;
 
   // MAX SUPPLY
-  uint public maxEthemeralSupply = 10001; // #10000 last index
+  uint public maxEthemeralSupply = 10001; // #10000 last index, probably in 10 years
+  // uint public maxEthemeralSupply = 11; // #test
 
   // CURRENT SUPPLY
   uint public ethemeralSupply = 1; // #0 skipped
 
   // AVAILABLE
-  uint public maxPurchase = 5;
-  uint public maxAvailableEthemerals;
+  uint public maxAvailableIndex;
 
 
   // Mint price in ETH
-  uint public mintPrice = 100*10**18; // change once deployed
+  uint public mintPrice = 1*10**18; // change once deployed
   // Min tokens needed for discount
   uint public discountMinTokens = 2000*10**18; // 2000 tokens
   // ELF at birth
   uint16 public startingELF = 2000; // need to * 10 ** 18
 
-  address public admin;
 
   // ELF ERC20 address
-  address public tokenAddress;
+  address private tokenAddress;
 
   // iterable array of available cmIds
   uint[] private availableCmIds;
 
   // Arrays of Ethemerals
-  Meral[] public allEthemerals;
+  Meral[] private allEthemerals;
 
   // Delegates include game masters and auction houses
   mapping (address => bool) private delegates;
 
-  // Default to allows for better UX. User needs to disallow
-  mapping (address => bool) private disallowDelegates;
+    // Default to allows for better UX. User needs to allow
+  mapping (address => bool) private allowDelegates;
 
   constructor(string memory tUri, string memory cUri, address _tokenAddress) ERC721("Ethemerals", "MERALS") {
-    admin = msg.sender;
     _uri = tUri;
     contractUri = cUri;
     tokenAddress = _tokenAddress;
 
     // mint the #0 to fix the maths
     _safeMint(msg.sender, 0);
-    allEthemerals.push(Meral(1000, startingELF, 100, 100, 100));
+    allEthemerals.push(Meral(300, startingELF, 40, 30, 30));
+    emit OwnershipTransferred(address(0), msg.sender);
   }
 
 
@@ -83,14 +82,27 @@ contract Ethemerals is ERC721 {
   * @dev Mints an Ethemeral
   * Calls internal _mintEthemerals
   */
-  function mintEthemeral(uint numOfTokens, address recipient) payable external {
-    require(numOfTokens <= maxPurchase && numOfTokens > 0, "minting to much");
-    require(maxAvailableEthemerals - numOfTokens >= ethemeralSupply, "sale not active");
-    require(ethemeralSupply + numOfTokens <= maxEthemeralSupply, "supply will exceed");
-    require(msg.value >= mintPrice * numOfTokens ||
+  function mintEthemeral(address recipient) payable external {
+    require(maxAvailableIndex >= ethemeralSupply, "sale not active");
+    require(
+      msg.value >= mintPrice ||
       IERC20(tokenAddress).balanceOf(msg.sender) >= discountMinTokens &&
-      msg.value >= ((mintPrice * numOfTokens) - ((mintPrice * numOfTokens) / 4)), "not enough" );
-    _mintEthemerals(numOfTokens, recipient);
+      msg.value >= ((mintPrice) - (mintPrice / 10)), "not enough" ); // 10% discount
+    _mintEthemerals(1, recipient);
+  }
+
+  /**
+  * @dev Mints an Ethemeral
+  * Calls internal _mintEthemerals
+  */
+  function mintEthemerals(address recipient) payable external {
+    require(maxAvailableIndex - 2 >= ethemeralSupply, "sale not active");
+    uint tier3MintPrice = (mintPrice * 3 - ((mintPrice * 3) / 10)); // 10% discount
+    require(
+      msg.value >= tier3MintPrice ||
+      IERC20(tokenAddress).balanceOf(msg.sender) >= discountMinTokens &&
+      msg.value >= ((tier3MintPrice) - (tier3MintPrice / 10)), "not enough" ); // 10% discount
+    _mintEthemerals(3, recipient);
   }
 
   /**
@@ -101,52 +113,57 @@ contract Ethemerals is ERC721 {
   function _mintEthemerals(uint amountMerals, address recipient) internal {
     for (uint i = 0; i < amountMerals; i++) {
       _safeMint(recipient, ethemeralSupply);
-      uint8 atk = uint8(_random(78, nonce + 123));
+
+      uint8 atk = uint8(_random(10, 60, nonce + 123)); // max 70
       nonce ++;
-      uint8 spd = uint8(_random(100 - atk, nonce * 2));
-      uint8 def = 100 - atk - spd;
+
+      uint8 def = uint8(_random(10, 80 - atk, nonce)); // max 80
+
+      uint8 spd = 100 - atk - def;
+
+
       allEthemerals.push(Meral(
         300,
         startingELF,
-        atk < 8 ? atk*2+1 : atk,
-        def < 8 ? def*2+1 : def,
-        spd < 8 ? spd*2+1 : spd
+        atk,
+        def,
+        spd
       ));
-      ethemeralSupply ++;
+
       emit Mint(
         ethemeralSupply,
         startingELF,
-        atk < 8 ? atk*2+1 : atk,
-        def < 8 ? def*2+1 : def,
-        spd < 8 ? spd*2+1 : spd
+        atk,
+        def,
+        spd
       );
+
+      ethemeralSupply ++;
     }
   }
 
-
   /**
   * @dev Set or unset delegates
-  * setting true will disallow delegates
   */
-  function setDisallowDelegates(bool disallow) external {
-    disallowDelegates[msg.sender] = disallow;
-    emit DisallowDelegatesChange(msg.sender, disallow);
+  function setAllowDelegates(bool allow) external {
+    allowDelegates[msg.sender] = allow;
+    emit AllowDelegatesChange(msg.sender, allow);
   }
 
 
   // ADMIN ONLY FUNCTIONS
 
   // reserve 5 for founders
-  function mintReserve() external onlyAdmin() { //admin
-    maxAvailableEthemerals = 5;
+  function mintReserve() external onlyOwner() { //admin
+    maxAvailableIndex = 5;
     _mintEthemerals(5, msg.sender);
   }
 
-  function withdraw(address payable to) external onlyAdmin() { //admin
+  function withdraw(address payable to) external onlyOwner() { //admin
     to.transfer(address(this).balance);
   }
 
-  function setPrice(uint _price, bool inEth) external onlyAdmin() { //admin
+  function setPrice(uint _price, bool inEth) external onlyOwner() { //admin
     if(inEth) {
       mintPrice = _price;
     } else {
@@ -155,33 +172,28 @@ contract Ethemerals is ERC721 {
     emit PriceChange(_price, inEth);
   }
 
-  function setMaxAvailableEthemerals(uint _id) external onlyAdmin() { //admin
-    require(_id <= maxEthemeralSupply, "max supply"); // +1
-    maxAvailableEthemerals = _id;
+  function setMaxAvailableIndex(uint _id) external onlyOwner() { //admin
+    require(_id < maxEthemeralSupply, "max supply");
+    maxAvailableIndex = _id;
   }
 
-  function addDelegate(address _delegate, bool add) external onlyAdmin() { //admin
+  function addDelegate(address _delegate, bool add) external onlyOwner() { //admin
     delegates[_delegate] = add;
     emit DelegateChange(_delegate, add);
   }
 
-  function transferOwnership(address newAdmin) external onlyAdmin() { // ADMIN
-    emit OwnershipTransferred(admin, newAdmin);
-    admin = newAdmin;
-  }
-
-  function setBaseURI(string memory newuri) external onlyAdmin() {// ADMIN
+  function setBaseURI(string memory newuri) external onlyOwner() {// ADMIN
     _uri = newuri;
   }
 
-  function setContractURI(string memory _cUri) external onlyAdmin() {// ADMIN
+  function setContractURI(string memory _cUri) external onlyOwner() {// ADMIN
     contractUri = _cUri;
   }
 
 
   // VIEW ONLY
-  function _random(uint max, uint _nonce) private view returns(uint) {
-    return uint(keccak256(abi.encodePacked(_nonce, block.number, block.difficulty, msg.sender))) % max;
+  function _random(uint min, uint max, uint _nonce) private view returns(uint) {
+    return (uint(keccak256(abi.encodePacked(_nonce, block.number, block.difficulty, msg.sender))) % max) + min;
   }
 
   function _baseURI() internal view override returns (string memory) {
@@ -196,22 +208,21 @@ contract Ethemerals is ERC721 {
     return allEthemerals[_tokenId];
   }
 
+  function totalSupply() public view returns (uint256) {
+      return ethemeralSupply;
+  }
+
   /**
   * @dev See {IERC721-isApprovedForAll}.
   * White list for game masters and auction house
   */
-  function isApprovedForAll(address owner, address operator) public view override returns (bool) {
-    if (!disallowDelegates[owner] && (delegates[operator] == true)) {
+  function isApprovedForAll(address _owner, address _operator) public view override returns (bool) {
+    if (allowDelegates[_owner] && (delegates[_operator] == true)) {
       return true;
     }
 
-    return super.isApprovedForAll(owner, operator);
+    return super.isApprovedForAll(_owner, _operator);
   }
 
-
-  modifier onlyAdmin() {
-    require(msg.sender == admin, 'only admin');
-    _;
-  }
 
 }
