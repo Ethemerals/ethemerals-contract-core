@@ -14,44 +14,44 @@ contract('ERC721', (accounts) => {
 	});
 
 	it('should allow / disaalow delegates to transfer', async () => {
-		await game.setMaxAvailableIndex(11);
+		await game.setMaxAvailableIndex(16);
 		await game.setPrice(web3.utils.toWei('0.1'), true);
 		await game.mintEthemerals(player1, { from: player1, value: web3.utils.toWei('0.3') });
 		await game.mintEthemerals(player1, { from: player1, value: web3.utils.toWei('0.3') });
 
 		await game.addDelegate(gamemaster, true); // GM
-		await expectRevert(game.transferFrom(player1, gamemaster, 10, { from: gamemaster }), 'ERC721: transfer caller is not owner nor approved');
+		await expectRevert(game.transferFrom(player1, gamemaster, 16, { from: gamemaster }), 'ERC721: transfer caller is not owner nor approved');
 
 		await game.setAllowDelegates(true, { from: player1 });
 
-		await game.transferFrom(player1, gamemaster, 10, { from: gamemaster });
-		owner = await game.ownerOf(10);
+		await game.transferFrom(player1, gamemaster, 16, { from: gamemaster });
+		owner = await game.ownerOf(16);
 		assert(owner === gamemaster);
 
 		// cant take it back
-		await expectRevert(game.transferFrom(gamemaster, player1, 10, { from: player1 }), 'ERC721: transfer caller is not owner nor approved');
+		await expectRevert(game.transferFrom(gamemaster, player1, 16, { from: player1 }), 'ERC721: transfer caller is not owner nor approved');
 
-		await game.transferFrom(gamemaster, player1, 10, { from: gamemaster });
+		await game.transferFrom(gamemaster, player1, 16, { from: gamemaster });
 		await game.setAllowDelegates(false, { from: player1 });
-		await expectRevert(game.transferFrom(player1, gamemaster, 10, { from: gamemaster }), 'ERC721: transfer caller is not owner nor approved');
+		await expectRevert(game.transferFrom(player1, gamemaster, 16, { from: gamemaster }), 'ERC721: transfer caller is not owner nor approved');
 
-		await game.approve(gamemaster, 10, { from: player1 });
-		await game.transferFrom(player1, gamemaster, 10, { from: gamemaster });
-		owner = await game.ownerOf(10);
+		await game.approve(gamemaster, 16, { from: player1 });
+		await game.transferFrom(player1, gamemaster, 16, { from: gamemaster });
+		owner = await game.ownerOf(16);
 		assert(owner === gamemaster);
 
-		await game.transferFrom(gamemaster, player3, 10, { from: gamemaster });
-		owner = await game.ownerOf(10);
+		await game.transferFrom(gamemaster, player3, 16, { from: gamemaster });
+		owner = await game.ownerOf(16);
 		assert(owner === player3);
 
 		await game.setAllowDelegates(true, { from: player3 });
-		await game.transferFrom(player3, gamemaster, 10, { from: gamemaster });
-		owner = await game.ownerOf(10);
+		await game.transferFrom(player3, gamemaster, 16, { from: gamemaster });
+		owner = await game.ownerOf(16);
 		assert(owner === gamemaster);
 
-		await game.transferFrom(gamemaster, player3, 10, { from: gamemaster });
+		await game.transferFrom(gamemaster, player3, 16, { from: gamemaster });
 		await game.addDelegate(gamemaster, false); // GM
 
-		await expectRevert(game.transferFrom(player3, gamemaster, 10, { from: gamemaster }), 'ERC721: transfer caller is not owner nor approved');
+		await expectRevert(game.transferFrom(player3, gamemaster, 16, { from: gamemaster }), 'ERC721: transfer caller is not owner nor approved');
 	});
 });

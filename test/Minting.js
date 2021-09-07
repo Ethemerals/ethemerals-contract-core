@@ -13,13 +13,13 @@ contract('ERC721', (accounts) => {
 		// await game.addDelegate(admin, true);
 	});
 
-	it('should deploy and mint 5', async () => {
+	it('should deploy and mint 10', async () => {
 		await game.mintReserve();
 		owner = await game.ownerOf(1);
 		assert(owner === admin);
 
 		value = await game.ethemeralSupply();
-		assert(value.toString() === '6');
+		assert(value.toString() === '11');
 
 		value = await game.ownerOf(5);
 		assert(owner === admin);
@@ -80,11 +80,11 @@ contract('ERC721', (accounts) => {
 		await game.setPrice(web3.utils.toWei('0.1'), true, { from: admin });
 		await expectRevert(game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.1') }), 'sale not active');
 
-		await game.setMaxAvailableIndex(7, { from: admin });
+		await game.setMaxAvailableIndex(12, { from: admin });
 		await expectRevert(game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.01') }), 'not enough');
 		await expectRevert(game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.3') }), 'sale not active');
 
-		await game.setMaxAvailableIndex(10, { from: admin });
+		await game.setMaxAvailableIndex(15, { from: admin });
 		await expectRevert(game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.25') }), 'not enough');
 		await game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.27') });
 		await expectRevert(game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.27') }), 'sale not active');
@@ -93,10 +93,10 @@ contract('ERC721', (accounts) => {
 	it('it Should mint a token to player1', async () => {
 		await game.mintReserve();
 		await game.setPrice(web3.utils.toWei('0.1'), true, { from: admin });
-		await game.setMaxAvailableIndex(11, { from: admin });
+		await game.setMaxAvailableIndex(16, { from: admin });
 		await game.mintEthemeral(player1, { from: admin, value: web3.utils.toWei('0.1') });
 
-		const owner = await game.ownerOf(6);
+		const owner = await game.ownerOf(11);
 		assert(owner === player1);
 	});
 
@@ -166,7 +166,7 @@ contract('ERC721', (accounts) => {
 
 		value = await game.ethemeralSupply();
 		console.log(value.toNumber());
-		let mintAmount = 100;
+		let mintAmount = 250;
 		while (value.toNumber() < mintAmount) {
 			await game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.0001') });
 			value = await game.ethemeralSupply();
@@ -177,6 +177,10 @@ contract('ERC721', (accounts) => {
 		let def = 0;
 		let spd = 0;
 
+		let atkLow = 100;
+		let defLow = 100;
+		let spdLow = 100;
+
 		for (let i = 0; i < value.toNumber(); i++) {
 			meral = await game.getEthemeral(i);
 			console.log(meral.toString());
@@ -184,9 +188,19 @@ contract('ERC721', (accounts) => {
 			atk += parseInt(meral[2]);
 			def += parseInt(meral[3]);
 			spd += parseInt(meral[4]);
+			if (parseInt(meral[2]) < atkLow) {
+				atkLow = parseInt(meral[2]);
+			}
+			if (parseInt(meral[3]) < atkLow) {
+				defLow = parseInt(meral[3]);
+			}
+			if (parseInt(meral[4]) < atkLow) {
+				spdLow = parseInt(meral[4]);
+			}
 		}
 
 		console.log(atk, def, spd);
 		console.log(atk / mintAmount, def / mintAmount, spd / mintAmount);
+		console.log(atkLow, defLow, spdLow);
 	});
 });

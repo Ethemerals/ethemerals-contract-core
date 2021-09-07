@@ -8,6 +8,7 @@ import "../openzep/access/Ownable.sol";
 
 contract Ethemerals is ERC721, Ownable {
 
+  event ChangeScore(uint tokenId, uint16 score, bool add, uint32 rewards);
   event PriceChange(uint price, bool inEth);
   event Mint(uint id, uint16 elf, uint8 atk, uint8 def, uint8 spd);
   event DelegateChange(address indexed delegate, bool add);
@@ -20,7 +21,7 @@ contract Ethemerals is ERC721, Ownable {
   // Basic minimal struct for an Ethemeral, addon contracts for inventory and stats
   struct Meral {
     uint16 score;
-    uint16 rewards;
+    uint32 rewards;
     uint8 atk;
     uint8 def;
     uint8 spd;
@@ -33,7 +34,7 @@ contract Ethemerals is ERC721, Ownable {
   uint private nonce;
 
   // MAX SUPPLY
-  uint public maxEthemeralSupply = 10001; // #10000 last index, probably in 10 years
+  uint public maxEthemeralSupply = 10001; // #10000 last index, probably in 10 years :)
   // uint public maxEthemeralSupply = 11; // #test
 
   // CURRENT SUPPLY
@@ -114,10 +115,10 @@ contract Ethemerals is ERC721, Ownable {
     for (uint i = 0; i < amountMerals; i++) {
       _safeMint(recipient, ethemeralSupply);
 
-      uint8 atk = uint8(_random(10, 60, nonce + 123)); // max 70
+      uint8 atk = uint8(_random(10, 61, nonce + 123)); // max 71
       nonce ++;
 
-      uint8 def = uint8(_random(10, 80 - atk, nonce)); // max 80
+      uint8 def = uint8(_random(10, 80 - atk, nonce)); // max 90
 
       uint8 spd = 100 - atk - def;
 
@@ -150,13 +151,48 @@ contract Ethemerals is ERC721, Ownable {
     emit AllowDelegatesChange(msg.sender, allow);
   }
 
+  // GM FUNCTIONS
+
+  /**
+    * @dev Changes '_tokenId' score by 'offset' amount either 'add' or reduce.
+    * clamps score > 0 and <= 1000
+    * clamps ELF rewards amounts to something reasonable
+    */
+  function changeScore(uint _tokenId, uint16 offset, bool add, uint32 amount) external {
+    require(delegates[msg.sender] == true, "delegates only");
+    require(_exists(_tokenId), "not exist");
+
+    Meral storage tokenCurrent = allEthemerals[_tokenId];
+
+    uint16 _score = tokenCurrent.score;
+    uint16 newScore;
+
+    if (add) {
+      uint16 sum = _score + offset;
+      newScore = sum > 1000 ? 1000 : sum;
+    } else {
+      if (_score <= offset) {
+        newScore = 0;
+      } else {
+        newScore = _score - offset;
+      }
+    }
+
+    tokenCurrent.score = newScore;
+    uint32 amountClamped = amount > 10000 ? 10000 : amount; //clamp 10000 tokens
+    tokenCurrent.rewards += amountClamped;
+
+    nonce++;
+    emit ChangeScore(_tokenId, newScore, add, amountClamped);
+  }
+
 
   // ADMIN ONLY FUNCTIONS
 
-  // reserve 5 for founders
+  // reserve 5 for founders + 5 for give aways
   function mintReserve() external onlyOwner() { //admin
-    maxAvailableIndex = 5;
-    _mintEthemerals(5, msg.sender);
+    maxAvailableIndex = 10;
+    _mintEthemerals(10, msg.sender);
   }
 
   function withdraw(address payable to) external onlyOwner() { //admin
