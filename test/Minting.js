@@ -9,7 +9,7 @@ contract('ERC721', (accounts) => {
 
 	beforeEach(async () => {
 		cct = await CCT.new('CryptoCoinsTokens', 'CCT');
-		game = await Game.new('https://api.hello.com/', 'https://www.hello.com/contract', cct.address);
+		game = await Game.new('https://api.hello.com/', cct.address);
 		// await game.addDelegate(admin, true);
 	});
 
@@ -33,7 +33,6 @@ contract('ERC721', (accounts) => {
 		await expectRevert(game.setMaxAvailableIndex(10, { from: player1 }), 'Ownable: caller is not the owner');
 		await expectRevert(game.transferOwnership(player2, { from: player1 }), 'Ownable: caller is not the owner');
 		await expectRevert(game.setBaseURI('whats up dog', { from: player1 }), 'Ownable: caller is not the owner');
-		await expectRevert(game.setContractURI('whats up dog', { from: player1 }), 'Ownable: caller is not the owner');
 	});
 
 	it('should not set max Ethemerals more then supply', async () => {
@@ -53,11 +52,8 @@ contract('ERC721', (accounts) => {
 		assert(value.toString() === web3.utils.toWei('0.1'));
 	});
 
-	it('should set base URI and contract URI', async () => {
+	it('should set base URI', async () => {
 		await game.mintReserve();
-		await game.setContractURI('https://www.whatsupdog.com');
-		value = await game.contractURI();
-		assert(value.toString() == 'https://www.whatsupdog.com');
 
 		value = await game.tokenURI(5);
 		assert(value === 'https://api.hello.com/5');

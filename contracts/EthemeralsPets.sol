@@ -6,21 +6,21 @@ import "../openzep/token/ERC721/ERC721.sol";
 import "../openzep/token/ERC20/IERC20.sol";
 import "../openzep/access/Ownable.sol";
 
-contract Ethemerals is ERC721, Ownable {
+contract EthemeralsPets is ERC721, Ownable {
 
   event ChangeScore(uint tokenId, uint16 score, bool add, uint32 rewards);
   event ChangeRewards(uint tokenId, uint32 rewards, bool add, uint8 action);
-  event PriceChange(uint price, bool inEth);
+  event PriceChange(uint price);
   event Mint(uint id, uint16 elf, uint8 atk, uint8 def, uint8 spd);
   event DelegateChange(address indexed delegate, bool add);
   event AllowDelegatesChange(address indexed user, bool allow);
 
   // NFT TOKENOMICS
-  // 1-1000 intial sale of 'Ethemerals'
-  // max 10,000 Ethemerals
+  // Bonus Drops for Ethemeral Holders
+  // max 10,000 Ethemerals Pets
 
-  // Basic minimal struct for an Ethemeral, addon contracts for inventory and stats
-  struct Meral {
+  // Basic minimal struct for an Pet, addon contracts for inventory and stats
+  struct Pet {
     uint16 score;
     uint32 rewards;
     uint8 atk;
@@ -44,18 +44,17 @@ contract Ethemerals is ERC721, Ownable {
   uint public maxAvailableIndex;
 
 
-  // Mint price in ETH
+  // Mint price in ETH / ELF
   uint public mintPrice = 1*10**18; // change once deployed
-  // Min tokens needed for discount
-  uint public discountMinTokens = 2000*10**18; // 2000 tokens
+
   // ELF at birth
-  uint16 public startingELF = 2000; // need to * 10 ** 18
+  uint16 public startingELF = 1000; // need to * 10 ** 18
 
   // ELF ERC20 address
   address private tokenAddress;
 
   // Arrays of Ethemerals
-  Meral[] private allEthemerals;
+  Pet[] private allPets;
 
   // Delegates include game masters and auction houses
   mapping (address => bool) private delegates;
@@ -63,51 +62,35 @@ contract Ethemerals is ERC721, Ownable {
     // Default to allows for better UX. User needs to allow
   mapping (address => bool) private allowDelegates;
 
-  constructor(string memory tUri, address _tokenAddress) ERC721("Ethemerals", "MERALS") {
+  constructor(string memory tUri, address _tokenAddress) ERC721("Ethemerals Pets", "PETS") {
     _uri = tUri;
     tokenAddress = _tokenAddress;
 
     // mint the #0 to fix the maths
     _safeMint(msg.sender, 0);
-    allEthemerals.push(Meral(300, startingELF, 40, 30, 30));
+    allPets.push(Pet(300, startingELF, 40, 30, 30));
     emit OwnershipTransferred(address(0), msg.sender);
   }
 
 
   /**
-  * @dev Mints an Ethemeral
+  * @dev Mints a Pet
   * Calls internal _mintEthemerals
   */
-  function mintEthemeral(address recipient) payable external {
+  function mintPet(address recipient) payable external {
     require(maxAvailableIndex >= ethemeralSupply, "sale not active");
-    require(
-      msg.value >= mintPrice ||
-      IERC20(tokenAddress).balanceOf(msg.sender) >= discountMinTokens &&
-      msg.value >= ((mintPrice) - (mintPrice / 10)), "not enough" ); // 10% discount
-    _mintEthemerals(1, recipient);
+    require(msg.value >= mintPrice, "not enough" );
+    _mintPets(1, recipient);
   }
 
-  /**
-  * @dev Mints an Ethemeral
-  * Calls internal _mintEthemerals
-  */
-  function mintEthemerals(address recipient) payable external {
-    require(maxAvailableIndex - 2 >= ethemeralSupply, "sale not active");
-    uint tier3MintPrice = (mintPrice * 3 - ((mintPrice * 3) / 10)); // 10% discount
-    require(
-      msg.value >= tier3MintPrice ||
-      IERC20(tokenAddress).balanceOf(msg.sender) >= discountMinTokens &&
-      msg.value >= ((tier3MintPrice) - (tier3MintPrice / 10)), "not enough" ); // 10% discount
-    _mintEthemerals(3, recipient);
-  }
 
   /**
-  * @dev Mints an Ethemeral
+  * @dev Mints a Pet
   * sets score and startingELF
   * sets random [atk, def, spd]
   */
-  function _mintEthemerals(uint amountMerals, address recipient) internal {
-    for (uint i = 0; i < amountMerals; i++) {
+  function _mintPets(uint amountPets, address recipient) internal {
+    for (uint i = 0; i < amountPets; i++) {
       _safeMint(recipient, ethemeralSupply);
 
       uint8 atk = uint8(_random(10, 61, nonce + 123)); // max 71
@@ -118,7 +101,7 @@ contract Ethemerals is ERC721, Ownable {
       uint8 spd = 100 - atk - def;
 
 
-      allEthemerals.push(Meral(
+      allPets.push(Pet(
         300,
         startingELF,
         atk,
@@ -149,16 +132,16 @@ contract Ethemerals is ERC721, Ownable {
   // GM FUNCTIONS
 
   /**
-    * @dev Changes '_tokenId' score by 'offset' amount either 'add' or reduce.
-    * clamps score > 0 and <= 1000
-    * clamps ELF rewards amounts to something reasonable
-    * delegates only
-    */
+  * @dev Changes '_tokenId' score by 'offset' amount either 'add' or reduce.
+  * clamps score > 0 and <= 1000
+  * clamps ELF rewards amounts to something reasonable
+  * delegates only
+  */
   function changeScore(uint _tokenId, uint16 offset, bool add, uint32 amount) external {
     require(delegates[msg.sender] == true, "delegates only");
     require(_exists(_tokenId), "not exist");
 
-    Meral storage tokenCurrent = allEthemerals[_tokenId];
+    Pet storage tokenCurrent = allPets[_tokenId];
 
     uint16 _score = tokenCurrent.score;
     uint16 newScore;
@@ -186,12 +169,12 @@ contract Ethemerals is ERC721, Ownable {
   /**
     * @dev Changes '_tokenId' rewards by 'offset' amount either 'add' or reduce.
     * delegates only
-    */
+  */
   function changeRewards(uint _tokenId, uint32 offset, bool add, uint8 action) external {
     require(delegates[msg.sender] == true, "delegates only");
     require(_exists(_tokenId), "not exist");
 
-    Meral storage tokenCurrent = allEthemerals[_tokenId];
+    Pet storage tokenCurrent = allPets[_tokenId];
 
     uint32 _rewards = tokenCurrent.rewards;
     uint32 newRewards;
@@ -221,20 +204,20 @@ contract Ethemerals is ERC721, Ownable {
   // reserve 5 for founders + 5 for give aways
   function mintReserve() external onlyOwner() { //admin
     maxAvailableIndex = 10;
-    _mintEthemerals(10, msg.sender);
+    _mintPets(10, msg.sender);
   }
 
   function withdraw(address payable to) external onlyOwner() { //admin
     to.transfer(address(this).balance);
   }
 
-  function setPrice(uint _price, bool inEth) external onlyOwner() { //admin
-    if(inEth) {
-      mintPrice = _price;
-    } else {
-      discountMinTokens = _price;
-    }
-    emit PriceChange(_price, inEth);
+  function withdrawELF(address payable to) external onlyOwner() { //admin
+    to.transfer(address(this).balance);
+  }
+
+  function setPrice(uint _price) external onlyOwner() { //admin
+    mintPrice = _price;
+    emit PriceChange(_price);
   }
 
   function setMaxAvailableIndex(uint _id) external onlyOwner() { //admin
@@ -261,8 +244,8 @@ contract Ethemerals is ERC721, Ownable {
     return _uri;
   }
 
-  function getEthemeral(uint _tokenId) external view returns(Meral memory) {
-    return allEthemerals[_tokenId];
+  function getEthemeral(uint _tokenId) external view returns(Pet memory) {
+    return allPets[_tokenId];
   }
 
   function totalSupply() public view returns (uint256) {

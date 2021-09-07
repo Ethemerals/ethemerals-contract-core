@@ -9,7 +9,7 @@ contract('ERC721', (accounts) => {
 
 	beforeEach(async () => {
 		cct = await CCT.new('CryptoCoinsTokens', 'CCT');
-		game = await Game.new('https://api.hello.com/', 'https://www.hello.com/contract', cct.address);
+		game = await Game.new('https://api.hello.com/', cct.address);
 		await game.mintReserve();
 	});
 
