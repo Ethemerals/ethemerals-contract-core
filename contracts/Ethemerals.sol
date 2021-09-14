@@ -51,6 +51,7 @@ contract Ethemerals is ERC721, Ownable {
   // ELF at birth
   uint16 public startingELF = 2000; // need to * 10 ** 18
 
+
   // ELF ERC20 address
   address private tokenAddress;
 
@@ -88,7 +89,7 @@ contract Ethemerals is ERC721, Ownable {
   }
 
   /**
-  * @dev Mints an Ethemeral
+  * @dev Mints 3 Ethemerals
   * Calls internal _mintEthemerals
   */
   function mintEthemerals(address recipient) payable external {

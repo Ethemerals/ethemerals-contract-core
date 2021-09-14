@@ -94,7 +94,7 @@ module.exports = {
 	// Set default mocha options here, use special reporters etc.
 	mocha: {
 		reporter: 'eth-gas-reporter',
-		reporterOptions: { gasPrice: '20', coinmarketcap: process.env.CMKEY, currency: 'USD' }, // See options below
+		reporterOptions: { gasPrice: '50', coinmarketcap: process.env.CMKEY, currency: 'USD' }, // See options below
 	},
 
 	// Configure your compilers

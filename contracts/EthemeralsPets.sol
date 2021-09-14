@@ -10,7 +10,7 @@ contract EthemeralsPets is ERC721, Ownable {
 
   event ChangeScore(uint tokenId, uint16 score, bool add, uint32 rewards);
   event ChangeRewards(uint tokenId, uint32 rewards, bool add, uint8 action);
-  event PriceChange(uint price);
+  event PriceChange(uint price, bool inEth);
   event Mint(uint id, uint16 elf, uint8 atk, uint8 def, uint8 spd);
   event DelegateChange(address indexed delegate, bool add);
   event AllowDelegatesChange(address indexed user, bool allow);
@@ -43,9 +43,9 @@ contract EthemeralsPets is ERC721, Ownable {
   // AVAILABLE
   uint public maxAvailableIndex;
 
-
   // Mint price in ETH / ELF
   uint public mintPrice = 1*10**18; // change once deployed
+  uint public mintPriceELF = 1000*10**18; // change once deployed
 
   // ELF at birth
   uint16 public startingELF = 1000; // need to * 10 ** 18
@@ -77,10 +77,22 @@ contract EthemeralsPets is ERC721, Ownable {
   * @dev Mints a Pet
   * Calls internal _mintEthemerals
   */
-  function mintPet(address recipient) payable external {
+  function mintPet(address recipient, uint amountPets) payable external {
     require(maxAvailableIndex >= ethemeralSupply, "sale not active");
-    require(msg.value >= mintPrice, "not enough" );
-    _mintPets(1, recipient);
+    require(amountPets < 25, "to much");
+    require(msg.value >= mintPrice * amountPets, "not enough" );
+    _mintPets(amountPets, recipient);
+  }
+
+  /**
+  * @dev Mints a Pet
+  * Calls internal _mintEthemerals
+  */
+  function mintPetWithELF(address recipient, uint amountPets) payable external {
+    require(maxAvailableIndex >= ethemeralSupply, "sale not active");
+    require(amountPets < 25, "to much");
+    require(msg.value >= mintPrice * amountPets, "not enough" );
+    _mintPets(amountPets, recipient);
   }
 
 
@@ -212,12 +224,16 @@ contract EthemeralsPets is ERC721, Ownable {
   }
 
   function withdrawELF(address payable to) external onlyOwner() { //admin
-    to.transfer(address(this).balance);
+    IERC20(tokenAddress).transferFrom(address(this), to, IERC20(tokenAddress).balanceOf(address(this)));
   }
 
-  function setPrice(uint _price) external onlyOwner() { //admin
-    mintPrice = _price;
-    emit PriceChange(_price);
+  function setPrice(uint _price, bool inEth) external onlyOwner() { //admin
+    if(inEth) {
+      mintPrice = _price;
+    } else {
+      mintPriceELF = _price;
+    }
+    emit PriceChange(_price, inEth);
   }
 
   function setMaxAvailableIndex(uint _id) external onlyOwner() { //admin
