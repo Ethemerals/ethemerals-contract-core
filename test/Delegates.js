@@ -15,7 +15,7 @@ contract('ERC721', (accounts) => {
 
 	it('should allow / disaalow delegates to transfer', async () => {
 		await game.setMaxAvailableIndex(16);
-		await game.setPrice(web3.utils.toWei('0.1'), true);
+		await game.setPrice(web3.utils.toWei('0.1'));
 		await game.mintEthemerals(player1, { from: player1, value: web3.utils.toWei('0.3') });
 		await game.mintEthemerals(player1, { from: player1, value: web3.utils.toWei('0.3') });
 
