@@ -18,7 +18,7 @@ contract('ERC721', (accounts) => {
 		owner = await game.ownerOf(1);
 		assert(owner === admin);
 
-		value = await game.ethemeralSupply();
+		value = await game.meralSupply();
 		assert(value.toString() === '11');
 
 		value = await game.ownerOf(5);
@@ -27,20 +27,22 @@ contract('ERC721', (accounts) => {
 
 	it('should not allow admin only functions', async () => {
 		await expectRevert(game.mintReserve({ from: player2 }), 'Ownable: caller is not the owner');
+		await expectRevert(game.mintMeralsAdmin(player1, 1, { from: player2 }), 'Ownable: caller is not the owner');
 		await expectRevert(game.setPrice(10000, { from: player2 }), 'Ownable: caller is not the owner');
 		await expectRevert(game.withdraw(admin, { from: player1 }), 'Ownable: caller is not the owner');
-		await expectRevert(game.setMaxAvailableIndex(10, { from: player1 }), 'Ownable: caller is not the owner');
+		await expectRevert(game.setMaxMeralIndex(10, { from: player1 }), 'Ownable: caller is not the owner');
 		await expectRevert(game.transferOwnership(player2, { from: player1 }), 'Ownable: caller is not the owner');
 		await expectRevert(game.setBaseURI('whats up dog', { from: player1 }), 'Ownable: caller is not the owner');
+		await expectRevert(game.setMeralBase(10, 1, 5, { from: player1 }), 'Ownable: caller is not the owner');
 	});
 
 	it('should not set max Ethemerals more then supply', async () => {
 		await game.mintReserve();
-		value = await game.maxAvailableIndex();
+		value = await game.maxMeralIndex();
 
-		await expectRevert(game.setMaxAvailableIndex(10001, { from: admin }), 'max supply');
-		await game.setMaxAvailableIndex(10000, { from: admin });
-		value = await game.maxAvailableIndex();
+		await expectRevert(game.setMaxMeralIndex(10001, { from: admin }), 'max supply');
+		await game.setMaxMeralIndex(10000, { from: admin });
+		value = await game.maxMeralIndex();
 		assert(value.toNumber() === 10000);
 	});
 
@@ -73,34 +75,46 @@ contract('ERC721', (accounts) => {
 		await game.mintReserve();
 
 		await game.setPrice(web3.utils.toWei('0.1'), { from: admin });
-		await expectRevert(game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.1') }), 'sale not active');
+		await expectRevert(game.mintMeral(player2, { from: player2, value: web3.utils.toWei('0.1') }), 'sale not active');
 
-		await game.setMaxAvailableIndex(12, { from: admin });
-		await expectRevert(game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.01') }), 'not enough');
-		await expectRevert(game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.3') }), 'sale not active');
+		await game.setMaxMeralIndex(12, { from: admin });
+		await expectRevert(game.mintMeral(player2, { from: player2, value: web3.utils.toWei('0.01') }), 'not enough');
+		await expectRevert(game.mintMerals(player2, { from: player2, value: web3.utils.toWei('0.3') }), 'sale not active');
 
-		await game.setMaxAvailableIndex(15, { from: admin });
-		await expectRevert(game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.25') }), 'not enough');
-		await game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.27') });
-		await expectRevert(game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.27') }), 'sale not active');
+		await game.setMaxMeralIndex(15, { from: admin });
+		await expectRevert(game.mintMerals(player2, { from: player2, value: web3.utils.toWei('0.25') }), 'not enough');
+		await game.mintMerals(player2, { from: player2, value: web3.utils.toWei('0.27') });
+		await expectRevert(game.mintMerals(player2, { from: player2, value: web3.utils.toWei('0.27') }), 'sale not active');
 	});
 
 	it('it Should mint a token to player1', async () => {
 		await game.mintReserve();
 		await game.setPrice(web3.utils.toWei('0.1'), { from: admin });
-		await game.setMaxAvailableIndex(16, { from: admin });
-		await game.mintEthemeral(player1, { from: admin, value: web3.utils.toWei('0.1') });
+		await game.setMaxMeralIndex(16, { from: admin });
+		await game.mintMeral(player1, { from: admin, value: web3.utils.toWei('0.1') });
 
 		const owner = await game.ownerOf(11);
+		assert(owner === player1);
+	});
+
+	it('it Should mint a token to player1 from admin', async () => {
+		await game.mintReserve();
+		await game.setPrice(web3.utils.toWei('0.1'), { from: admin });
+		await game.setMaxMeralIndex(30, { from: admin });
+		await game.mintMeralsAdmin(player1, 20, { from: admin });
+
+		owner = await game.ownerOf(11);
+		assert(owner === player1);
+		owner = await game.ownerOf(21);
 		assert(owner === player1);
 	});
 
 	it('should withdraw eth', async () => {
 		await game.setPrice(web3.utils.toWei('1'), { from: admin });
 		await game.mintReserve();
-		await game.setMaxAvailableIndex(1000, { from: admin });
+		await game.setMaxMeralIndex(1000, { from: admin });
 
-		await game.mintEthemerals(admin, { from: admin, value: web3.utils.toWei('3') });
+		await game.mintMerals(admin, { from: admin, value: web3.utils.toWei('3') });
 
 		value = await web3.eth.getBalance(game.address);
 		assert(web3.utils.fromWei(value) == '3');
@@ -117,16 +131,16 @@ contract('ERC721', (accounts) => {
 
 	it('should mint ethemerals up to max available', async () => {
 		await game.setPrice(web3.utils.toWei('0.0001'), { from: admin });
-		await game.setMaxAvailableIndex(1, { from: admin });
-		await game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.0001') });
-		await expectRevert(game.mintEthemeral(player1, { from: player1, value: web3.utils.toWei('0.1') }), 'sale not active');
+		await game.setMaxMeralIndex(1, { from: admin });
+		await game.mintMeral(player2, { from: player2, value: web3.utils.toWei('0.0001') });
+		await expectRevert(game.mintMeral(player1, { from: player1, value: web3.utils.toWei('0.1') }), 'sale not active');
 
 		value = await game.ownerOf(1);
 		assert(value === player2);
 
-		await game.setMaxAvailableIndex(4, { from: admin });
-		await game.mintEthemerals(player2, { from: player2, value: web3.utils.toWei('0.0003') });
-		await expectRevert(game.mintEthemerals(player1, { from: player1, value: web3.utils.toWei('0.1') }), 'sale not active');
+		await game.setMaxMeralIndex(4, { from: admin });
+		await game.mintMerals(player2, { from: player2, value: web3.utils.toWei('0.0003') });
+		await expectRevert(game.mintMerals(player1, { from: player1, value: web3.utils.toWei('0.1') }), 'sale not active');
 		value = await game.ownerOf(4);
 		assert(value === player2);
 	});
@@ -134,14 +148,14 @@ contract('ERC721', (accounts) => {
 	it('should mint 100 ethemerals and get ethemerals', async () => {
 		await game.setPrice(web3.utils.toWei('0.0001'), { from: admin });
 		await game.mintReserve();
-		await game.setMaxAvailableIndex(1000, { from: admin });
+		await game.setMaxMeralIndex(1000, { from: admin });
 
-		value = await game.ethemeralSupply();
+		value = await game.meralSupply();
 		console.log(value.toNumber());
 		let mintAmount = 250;
 		while (value.toNumber() < mintAmount) {
-			await game.mintEthemeral(player2, { from: player2, value: web3.utils.toWei('0.0001') });
-			value = await game.ethemeralSupply();
+			await game.mintMeral(player2, { from: player2, value: web3.utils.toWei('0.0001') });
+			value = await game.meralSupply();
 			await time.increase(120);
 		}
 

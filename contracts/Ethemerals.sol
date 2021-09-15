@@ -33,14 +33,13 @@ contract Ethemerals is ERC721, Ownable {
   uint private nonce;
 
   // MAX SUPPLY
-  uint public maxEthemeralSupply = 10001; // #10000 last index, probably in 10 years :)
-  // uint public maxEthemeralSupply = 11; // #test
+  uint public maxMeralSupply = 10001; // #10000 last index, probably in 10 years :)
 
   // CURRENT SUPPLY
-  uint public ethemeralSupply = 1; // #0 skipped
+  uint public meralSupply = 1; // #0 skipped
 
   // AVAILABLE
-  uint public maxAvailableIndex;
+  uint public maxMeralIndex;
 
   // Mint price in ETH
   uint public mintPrice = 1*10**18; // change once deployed
@@ -53,8 +52,9 @@ contract Ethemerals is ERC721, Ownable {
 
   // Arrays of Ethemerals
   Meral[] private allMerals;
-  // mapping of EthemeralsBases
-  mapping (uint => uint16[]) private allMeralsBases;
+
+  // mapping of EthemeralsBases (only originals)
+  mapping (uint => uint16[]) private allMeralBases;
 
   // Delegates include game masters and auction houses
   mapping (address => bool) private delegates;
@@ -74,22 +74,22 @@ contract Ethemerals is ERC721, Ownable {
 
   /**
   * @dev Mints an Ethemeral
-  * Calls internal _mintEthemerals
+  * Calls internal _mintMerals
   */
-  function mintEthemeral(address recipient) payable external {
-    require(maxAvailableIndex >= ethemeralSupply, "sale not active");
-    require(msg.value >= mintPrice, "not enough" ); // 10% discount
-    _mintEthemerals(1, recipient);
+  function mintMeral(address recipient) payable external {
+    require(maxMeralIndex >= meralSupply, "sale not active");
+    require(msg.value >= mintPrice, "not enough" );
+    _mintMerals(1, recipient);
   }
 
   /**
-  * @dev Mints 3 Ethemerals
-  * Calls internal _mintEthemerals
+  * @dev Mints Ethemerals
+  * Calls internal _mintMerals
   */
-  function mintEthemerals(address recipient) payable external {
-    require(maxAvailableIndex - 2 >= ethemeralSupply, "sale not active");
+  function mintMerals(address recipient) payable external {
+    require(maxMeralIndex - 2 >= meralSupply, "sale not active");
     require(msg.value >= (mintPrice * 3 - ((mintPrice * 3) / 10)), "not enough" ); // 10% discount
-    _mintEthemerals(3, recipient);
+    _mintMerals(3, recipient);
   }
 
   /**
@@ -97,9 +97,9 @@ contract Ethemerals is ERC721, Ownable {
   * sets score and startingELF
   * sets random [atk, def, spd]
   */
-  function _mintEthemerals(uint amountMerals, address recipient) internal {
+  function _mintMerals(uint amountMerals, address recipient) internal {
     for (uint i = 0; i < amountMerals; i++) {
-      _safeMint(recipient, ethemeralSupply);
+      _safeMint(recipient, meralSupply);
 
       uint8 atk = uint8(_random(10, 61, nonce + 123)); // max 71
       nonce ++;
@@ -117,14 +117,14 @@ contract Ethemerals is ERC721, Ownable {
       ));
 
       emit Mint(
-        ethemeralSupply,
+        meralSupply,
         startingELF,
         atk,
         def,
         spd
       );
 
-      ethemeralSupply ++;
+      meralSupply ++;
     }
   }
 
@@ -210,8 +210,17 @@ contract Ethemerals is ERC721, Ownable {
 
   // reserve 5 for founders + 5 for give aways
   function mintReserve() external onlyOwner() { //admin
-    maxAvailableIndex = 10;
-    _mintEthemerals(10, msg.sender);
+    maxMeralIndex = 10;
+    _mintMerals(10, msg.sender);
+  }
+
+  /**
+  * @dev Mints Ethemerals Admin Only for giveaways
+  * Calls internal _mintMerals
+  */
+  function mintMeralsAdmin(address recipient, uint _amount) external onlyOwner() { //admin
+    require(maxMeralIndex - _amount + 1 >= meralSupply, "sale not active");
+    _mintMerals(_amount, recipient);
   }
 
   function withdraw(address payable to) external onlyOwner() { //admin
@@ -223,9 +232,9 @@ contract Ethemerals is ERC721, Ownable {
     emit PriceChange(_price);
   }
 
-  function setMaxAvailableIndex(uint _id) external onlyOwner() { //admin
-    require(_id < maxEthemeralSupply, "max supply");
-    maxAvailableIndex = _id;
+  function setMaxMeralIndex(uint _id) external onlyOwner() { //admin
+    require(_id < maxMeralSupply, "max supply");
+    maxMeralIndex = _id;
   }
 
   function addDelegate(address _delegate, bool add) external onlyOwner() { //admin
@@ -238,7 +247,7 @@ contract Ethemerals is ERC721, Ownable {
   }
 
   function setMeralBase(uint _tokenId, uint16 _cmId, uint16 _element) external onlyOwner() {// ADMIN
-    allMeralsBases[_tokenId] = [_cmId, _element];
+    allMeralBases[_tokenId] = [_cmId, _element];
   }
 
 
@@ -255,12 +264,12 @@ contract Ethemerals is ERC721, Ownable {
     return allMerals[_tokenId];
   }
 
-  function getEthemeralBase(uint _tokenId) external view returns(uint16 [] memory) {
-    return allMeralsBases[_tokenId];
+  function getMeralBase(uint _tokenId) external view returns(uint16 [] memory) {
+    return allMeralBases[_tokenId];
   }
 
   function totalSupply() public view returns (uint256) {
-    return ethemeralSupply;
+    return meralSupply;
   }
 
   /**
