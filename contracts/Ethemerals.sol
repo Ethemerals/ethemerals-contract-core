@@ -10,7 +10,7 @@ contract Ethemerals is ERC721, Ownable {
   event ChangeScore(uint tokenId, uint16 score, bool add, uint32 rewards);
   event ChangeRewards(uint tokenId, uint32 rewards, bool add, uint8 action);
   event PriceChange(uint price);
-  event Mint(uint id, uint16 elf, uint8 atk, uint8 def, uint8 spd);
+  event Mint(uint id, uint16 elf, uint16 atk, uint16 def, uint16 spd);
   event DelegateChange(address indexed delegate, bool add);
   event AllowDelegatesChange(address indexed user, bool allow);
 
@@ -22,9 +22,9 @@ contract Ethemerals is ERC721, Ownable {
   struct Meral {
     uint16 score;
     uint32 rewards;
-    uint8 atk;
-    uint8 def;
-    uint8 spd;
+    uint16 atk;
+    uint16 def;
+    uint16 spd;
   }
 
   string private _uri;
@@ -68,7 +68,7 @@ contract Ethemerals is ERC721, Ownable {
 
     // mint the #0 to fix the maths
     _safeMint(msg.sender, 0);
-    allMerals.push(Meral(300, startingELF, 40, 30, 30));
+    allMerals.push(Meral(300, startingELF, 250, 250, 250));
     emit OwnershipTransferred(address(0), msg.sender);
   }
 
@@ -101,12 +101,11 @@ contract Ethemerals is ERC721, Ownable {
     for (uint i = 0; i < amountMerals; i++) {
       _safeMint(recipient, meralSupply);
 
-      uint8 atk = uint8(_random(10, 61, nonce + 123)); // max 71
+      uint16 atk = uint16(_random(610, nonce+19) + 100); // max 500
       nonce ++;
+      uint16 def = uint16(_random(800 - atk, nonce+24) + 100); // max 451
 
-      uint8 def = uint8(_random(10, 80 - atk, nonce)); // max 90
-
-      uint8 spd = 100 - atk - def;
+      uint16 spd = 1000 - atk - def;
 
       allMerals.push(Meral(
         300,
@@ -252,8 +251,8 @@ contract Ethemerals is ERC721, Ownable {
 
 
   // VIEW ONLY
-  function _random(uint min, uint max, uint _nonce) private view returns(uint) {
-    return (uint(keccak256(abi.encodePacked(_nonce, block.number, block.difficulty, msg.sender))) % max) + min;
+  function _random(uint max, uint _nonce) private view returns(uint) {
+    return (uint(keccak256(abi.encodePacked(_nonce, block.number, block.difficulty, msg.sender))) % max);
   }
 
   function _baseURI() internal view override returns (string memory) {
