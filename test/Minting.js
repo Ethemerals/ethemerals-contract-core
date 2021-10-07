@@ -145,7 +145,7 @@ contract('ERC721', (accounts) => {
 		assert(value === player2);
 	});
 
-	it.only('should mint 100 ethemerals and get ethemerals', async () => {
+	it('should mint 100 ethemerals and get ethemerals', async () => {
 		await game.setPrice(web3.utils.toWei('0.0001'), { from: admin });
 		await game.mintReserve();
 		await game.setMaxMeralIndex(1000, { from: admin });

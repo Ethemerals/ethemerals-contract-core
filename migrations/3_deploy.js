@@ -8,8 +8,8 @@ const PriceFeed = artifacts.require('PriceFeed');
 const nftAddress = '0xcD9AdEEf8b68C61984348B2F379bA38b8Bd9BbF9'; // KOVAN
 
 module.exports = async function (deployer) {
-	await deployer.deploy(Ethemerals, 'https://api.ethemerals.com/api/', EthemeralLifeForce.address);
-	await deployer.deploy(EthemeralEquipables, 'https://api.ethemerals.com/api/equipment/', Ethemerals.address);
+	await deployer.deploy(Ethemerals, 'https://api.ethemerals.com/api/beta/', EthemeralLifeForce.address);
+	await deployer.deploy(EthemeralEquipables, 'https://api.ethemerals.com/api/beta/equipment/', Ethemerals.address);
 	// await deployer.deploy(UniV3Oracle);
 	// await deployer.deploy(PriceFeed, UniV3Oracle.address); // CHANGE TO MAINNET ADDRESS
 	// await deployer.deploy(EternalBattle, Ethemerals.address, PriceFeed.address);
