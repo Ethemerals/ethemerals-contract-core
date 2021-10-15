@@ -24,7 +24,7 @@ interface IEthemerals {
 }
 
 interface IPriceFeed {
-  function getPrice(uint _id) external view returns (uint);
+  function getPrice(uint8 _id) external view returns (uint);
 }
 
 contract EternalBattle is ERC721Holder {
@@ -37,9 +37,9 @@ contract EternalBattle is ERC721Holder {
 
   struct Stake {
     address owner;
-    uint priceFeedId;
+    uint8 priceFeedId;
+    uint16 positionSize;
     uint startingPrice;
-    uint positionSize;
     bool long;
   }
 
@@ -51,11 +51,13 @@ contract EternalBattle is ERC721Holder {
   uint private participationReward = 100*10**18; //100 tokens
   address private admin;
 
-  uint value1;
-  bool value2;
+  uint8 public value0;
+  uint public value1;
+  bool public value2;
 
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
+  mapping (uint => address) private stakesTemp;
 
   constructor(address _nftAddress, address _priceFeedAddress) {
     admin = msg.sender;
@@ -63,22 +65,22 @@ contract EternalBattle is ERC721Holder {
     priceFeed = IPriceFeed(_priceFeedAddress);
   }
 
-  function createStake(uint _tokenId, uint _priceFeedId, uint _positionSize, bool long) external {
-    require(_positionSize > 100 && _positionSize <= 20000); // TURN OFF FOR MOCK TODO
+  function createStake(uint _tokenId, uint8 _priceFeedId, uint16 _positionSize, bool long) external {
+    require(_positionSize > 99 && _positionSize <= 20000, 'bounds'); // TURN OFF FOR MOCK TODO
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
-    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _positionSize, long);
+    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, _positionSize, priceFeed.getPrice(_priceFeedId), long);
     emit StakeCreated(_tokenId, _priceFeedId, long);
   }
 
-  function cancelStake(uint _id) external {
-    require(stakes[_id].owner == msg.sender, 'only owner');
-    // require(nftContract.ownerOf(_id) == address(this), 'only staked');
-    (uint change, bool win) = getChange(_id);
+  function cancelStake(uint _tokenId) external {
+    require(stakes[_tokenId].owner == msg.sender, 'only owner');
+    require(nftContract.ownerOf(_tokenId) == address(this), 'only staked');
+    (uint change, bool win) = getChange(_tokenId);
     value1 = change;
     value2 = win;
-    nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
+    nftContract.safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId);
     // nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
-    emit StakeCanceled(_id, win);
+    emit StakeCanceled(_tokenId, win);
   }
 
   // function reviveToken(uint _id0, uint _id1, bool reap) external {
@@ -96,24 +98,25 @@ contract EternalBattle is ERC721Holder {
   function getChange(uint _tokenId) public view returns (uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
-    uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd) / 10000;
+    uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd) / 10;
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
     return (change, win);
   }
 
-  function calcBps(uint x, uint y) public pure returns (uint) {
-    uint _x = x > 10**12 ? x / 10**8 : x;
-    uint _y = y > 10**12 ? y / 10**8: y;
-    return _x > _y ? (_x - _y) * 10000 / _x : (_y - _x) * 10000 / _y ;
+  function calcBps(uint _x, uint _y) public pure returns (uint) {
+    // uint _x = x > 10**12 ? x / 10**8 : x;
+    // uint _y = y > 10**12 ? y / 10**8: y;
+    // 1000 = 10% 100 = 1% 10 = 0.1% 1 = 0.01%
+    return _x < _y ? (_y - _x) * 10000 / _x : (_x - _y) * 10000 / _y;
   }
 
-  function getStake(uint _id) external view returns (Stake memory) {
-    return stakes[_id];
+  function getStake(uint _tokenId) external view returns (Stake memory) {
+    return stakes[_tokenId];
   }
 
-  function cancelStakeAdmin(uint _id) external onlyAdmin() { //admin
-    nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
-    emit StakeCanceled(_id, false);
+  function cancelStakeAdmin(uint _tokenId) external onlyAdmin() { //admin
+    nftContract.safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId);
+    emit StakeCanceled(_tokenId, false);
   }
 
   function setReviverRewards(uint _score, uint _token) external onlyAdmin() { //admin

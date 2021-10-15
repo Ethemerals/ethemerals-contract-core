@@ -8,10 +8,11 @@ contract PriceFeedMock {
     // mapping of addresses to addresses to uint
     mapping (uint8 => uint) private prices;
 
-    function getPrice(uint8 _id) external view returns(uint256 quoteAmount){
+    function getPrice(uint8 _id) external view returns(uint price){
         return prices[_id];
     }
 
+    // FAKE MOCK
     function updatePrice(uint8 _id, uint price) external {
         prices[_id] = price;
     }
