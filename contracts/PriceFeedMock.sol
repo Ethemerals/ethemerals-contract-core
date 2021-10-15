@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.3;
+
+// MOCK
+contract PriceFeedMock {
+
+    // mapping of addresses to addresses to uint
+    mapping (uint8 => uint) private prices;
+
+    function getPrice(uint8 _id) external view returns(uint256 quoteAmount){
+        return prices[_id];
+    }
+
+    function updatePrice(uint8 _id, uint price) external {
+        prices[_id] = price;
+    }
+
+}

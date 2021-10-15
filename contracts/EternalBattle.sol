@@ -39,7 +39,7 @@ contract EternalBattle is ERC721Holder {
     address owner;
     uint priceFeedId;
     uint startingPrice;
-    uint position;
+    uint positionSize;
     bool long;
   }
 
@@ -51,6 +51,9 @@ contract EternalBattle is ERC721Holder {
   uint private participationReward = 100*10**18; //100 tokens
   address private admin;
 
+  uint value1;
+  bool value2;
+
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
 
@@ -60,38 +63,40 @@ contract EternalBattle is ERC721Holder {
     priceFeed = IPriceFeed(_priceFeedAddress);
   }
 
-  function createStake(uint _tokenId, uint _priceFeedId, uint _position, bool long) external {
-    require(_position > 0 && _position <= 20000); // TURN OFF FOR MOCK TODO
+  function createStake(uint _tokenId, uint _priceFeedId, uint _positionSize, bool long) external {
+    require(_positionSize > 100 && _positionSize <= 20000); // TURN OFF FOR MOCK TODO
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
-    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _position, long);
+    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, priceFeed.getPrice(_priceFeedId), _positionSize, long);
     emit StakeCreated(_tokenId, _priceFeedId, long);
   }
 
   function cancelStake(uint _id) external {
     require(stakes[_id].owner == msg.sender, 'only owner');
-    require(nftContract.ownerOf(_id) == address(this), 'only staked');
+    // require(nftContract.ownerOf(_id) == address(this), 'only staked');
     (uint change, bool win) = getChange(_id);
+    value1 = change;
+    value2 = win;
     nftContract.safeTransferFrom(address(this), stakes[_id].owner, _id);
-    nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
+    // nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
     emit StakeCanceled(_id, win);
   }
 
-  function reviveToken(uint _id0, uint _id1, bool reap) external {
-    require(nftContract.ownerOf(_id1) == msg.sender, 'only owner');
-    require(nftContract.ownerOf(_id0) == address(this), 'only staked');
-    (uint change, bool win) = getChange(_id0);
-    uint scoreBefore = nftContract.getCoinScore(_id0);
-    require((win != true && scoreBefore <= (change + 20)), 'not dead');
-    nftContract.safeTransferFrom(address(this), reap ? msg.sender : stakes[_id0].owner, _id0); // take owne0rship or return ownership
-    nftContract.changeScore(_id0, scoreBefore - 50, false, participationReward); // revive with 50 hp
-    nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? participationReward : reviverTokenReward); // reaper minus 2x points and add rewards
-    emit TokenRevived(_id0, reap, _id1, msg.sender);
-  }
+  // function reviveToken(uint _id0, uint _id1, bool reap) external {
+  //   require(nftContract.ownerOf(_id1) == msg.sender, 'only owner');
+  //   require(nftContract.ownerOf(_id0) == address(this), 'only staked');
+  //   (uint change, bool win) = getChange(_id0);
+  //   uint scoreBefore = nftContract.getCoinScore(_id0);
+  //   require((win != true && scoreBefore <= (change + 20)), 'not dead');
+  //   nftContract.safeTransferFrom(address(this), reap ? msg.sender : stakes[_id0].owner, _id0); // take owne0rship or return ownership
+  //   nftContract.changeScore(_id0, scoreBefore - 50, false, participationReward); // revive with 50 hp
+  //   nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? participationReward : reviverTokenReward); // reaper minus 2x points and add rewards
+  //   emit TokenRevived(_id0, reap, _id1, msg.sender);
+  // }
 
   function getChange(uint _tokenId) public view returns (uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
-    uint change = _stake.position * calcBps(_stake.startingPrice, priceEnd) / 10000;
+    uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd) / 10000;
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
     return (change, win);
   }
@@ -121,7 +126,7 @@ contract EternalBattle is ERC721Holder {
     emit OwnershipTransferred(admin, newAdmin);
   }
 
-  function setPriceFeed(address _pfAddress) external onlyAdmin() { //admin
+  function setPriceFeedContract(address _pfAddress) external onlyAdmin() { //admin
     priceFeed = IPriceFeed(_pfAddress);
   }
 
