@@ -12,7 +12,6 @@ interface IUniV3Oracle {
 contract PriceFeed {
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event FeedAdded(address pool, address baseToken, address quoteToken, uint32 id);
 
     IUniV3Oracle uniswap;
 
@@ -46,12 +45,6 @@ contract PriceFeed {
     function addFeed(address _pool, uint32 _period, uint128 _baseAmount, address _baseToken, address _quoteToken, uint32 _id) external {
         require(msg.sender == admin, 'admin only');
         priceFeeds[_id] = PricePair(_pool, _period, _baseAmount, _baseToken, _quoteToken);
-        emit FeedAdded(_pool, _baseToken, _quoteToken, _id);
-    }
-
-    function updateUniswap(address UniV3SpotPriceAddress) external {
-        require(msg.sender == admin, 'admin only');
-        uniswap = IUniV3Oracle(UniV3SpotPriceAddress);
     }
 
     function transferOwnership(address newAdmin) external {
