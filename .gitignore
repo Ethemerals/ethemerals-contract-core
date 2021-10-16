@@ -7,7 +7,7 @@ logs
 
 node_modules
 utils
-openzep
+
 
 bower_components
 firebase_admin.json
