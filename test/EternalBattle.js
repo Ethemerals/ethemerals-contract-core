@@ -40,32 +40,71 @@ contract('ERC721', (accounts) => {
 		await game.setAllowDelegates(true, { from: player1 });
 	});
 
-	it('should create and cancel stake', async () => {
+	it('should create and cancel stake win', async () => {
 		let mockPrice = 32 * 1000000;
 		await priceFeed.updatePrice(1, mockPrice);
 
 		let token = 11;
-		await battle.createStake(token, 1, 1000, true, { from: player1 });
-
-		let stake = await battle.getStake(token);
+		await battle.createStake(token, 1, 100, true, { from: player1 });
 		value = await game.ownerOf(token);
 		assert(value == battle.address);
-		console.log(stake.toString());
-		await priceFeed.updatePrice(1, mockPrice * 1.1);
 
-		value = await priceFeed.getPrice(1);
-		console.log(value.toString());
+		await priceFeed.updatePrice(1, parseInt(mockPrice * 1.1));
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
 
 		await battle.cancelStake(token, { from: player1 });
 		value = await game.ownerOf(token);
 		assert(value == player1);
 
-		value = await battle.value1();
-		console.log(value.toString());
-		value = await battle.value2();
-		console.log(value.toString());
-
 		meral = await game.getEthemeral(token);
 		console.log('token', meral.toString());
+	});
+
+	it('should create and cancel stake x10 win', async () => {
+		let mockPrice = 32 * 1000000;
+		await priceFeed.updatePrice(1, mockPrice);
+
+		let value = await game.totalSupply();
+
+		for (let i = 11; i < value; i++) {
+			await battle.createStake(i, 1, 255, true, { from: player1 });
+			meral = await game.getEthemeral(i);
+			console.log('token', meral.toString());
+		}
+
+		await priceFeed.updatePrice(1, parseInt(mockPrice * 1.1));
+
+		console.log('UNSTAKE');
+
+		for (let i = 11; i < value; i++) {
+			await battle.cancelStake(i, { from: player1 });
+			meral = await game.getEthemeral(i);
+			console.log('token', meral.toString());
+		}
+	});
+
+	it('should create and cancel stake x10 lose', async () => {
+		let mockPrice = 32 * 1000000;
+		await priceFeed.updatePrice(1, mockPrice);
+
+		let value = await game.totalSupply();
+
+		for (let i = 11; i < value; i++) {
+			await battle.createStake(i, 1, 255, true, { from: player1 });
+			meral = await game.getEthemeral(i);
+			console.log('token', meral.toString());
+		}
+
+		await priceFeed.updatePrice(1, parseInt(mockPrice - mockPrice * 0.1));
+
+		console.log('UNSTAKE');
+
+		for (let i = 11; i < value; i++) {
+			await battle.cancelStake(i, { from: player1 });
+			meral = await game.getEthemeral(i);
+			console.log('token', meral.toString());
+		}
 	});
 });

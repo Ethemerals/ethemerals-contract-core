@@ -38,7 +38,7 @@ contract EternalBattle is ERC721Holder {
   struct Stake {
     address owner;
     uint8 priceFeedId;
-    uint16 positionSize;
+    uint8 positionSize;
     uint startingPrice;
     bool long;
   }
@@ -65,8 +65,8 @@ contract EternalBattle is ERC721Holder {
     priceFeed = IPriceFeed(_priceFeedAddress);
   }
 
-  function createStake(uint _tokenId, uint8 _priceFeedId, uint16 _positionSize, bool long) external {
-    require(_positionSize > 99 && _positionSize <= 20000, 'bounds'); // TURN OFF FOR MOCK TODO
+  function createStake(uint _tokenId, uint8 _priceFeedId, uint8 _positionSize, bool long) external {
+    require(_positionSize > 0 && _positionSize <= 255, 'bounds');
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
     stakes[_tokenId] = Stake(msg.sender, _priceFeedId, _positionSize, priceFeed.getPrice(_priceFeedId), long);
     emit StakeCreated(_tokenId, _priceFeedId, long);
@@ -76,10 +76,8 @@ contract EternalBattle is ERC721Holder {
     require(stakes[_tokenId].owner == msg.sender, 'only owner');
     require(nftContract.ownerOf(_tokenId) == address(this), 'only staked');
     (uint change, bool win) = getChange(_tokenId);
-    value1 = change;
-    value2 = win;
     nftContract.safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId);
-    // nftContract.changeScore(_id, change, win, win ? change * 4 * 10**18 : participationReward); // change in bps
+    nftContract.changeScore(_tokenId, uint16(change), win, 0); // change in bps
     emit StakeCanceled(_tokenId, win);
   }
 
@@ -97,15 +95,20 @@ contract EternalBattle is ERC721Holder {
 
   function getChange(uint _tokenId) public view returns (uint, bool) {
     Stake storage _stake = stakes[_tokenId];
+    IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
     uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
-    uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd) / 10;
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
+
+    uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd);
+    if(win) {
+      change = ((_meral.atk * change / 3000) + change) / 1000; // BONUS ATK
+    } else {
+      change = ((change - (_meral.def * change / 3000)) ) / 1000; // BONUS ATK
+    }
     return (change, win);
   }
 
   function calcBps(uint _x, uint _y) public pure returns (uint) {
-    // uint _x = x > 10**12 ? x / 10**8 : x;
-    // uint _y = y > 10**12 ? y / 10**8: y;
     // 1000 = 10% 100 = 1% 10 = 0.1% 1 = 0.01%
     return _x < _y ? (_y - _x) * 10000 / _x : (_x - _y) * 10000 / _y;
   }
