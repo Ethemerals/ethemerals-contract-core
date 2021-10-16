@@ -31,9 +31,8 @@ contract EternalBattle is ERC721Holder {
 
   event StakeCreated (uint indexed tokenId, uint priceFeedId, bool long);
   event StakeCanceled (uint indexed tokenId, bool win);
-  event TokenRevived (uint indexed tokenId, bool reap, uint reviver, address reviverOwner);
+  event TokenRevived (uint indexed tokenId, uint reviver);
   event OwnershipTransferred(address previousOwner, address newOwner);
-
 
   struct Stake {
     address owner;
@@ -46,22 +45,16 @@ contract EternalBattle is ERC721Holder {
   IEthemerals nftContract;
   IPriceFeed priceFeed;
 
-  uint16 public atkDivMod = 3000; // lower number higher multiplier
-  uint16 public defDivMod = 2200; // lower number higher multiplier
-  uint16 public spdDivMod = 1000; // lower number higher multiplier
+  uint16 private atkDivMod = 3000; // lower number higher multiplier
+  uint16 private defDivMod = 2200; // lower number higher multiplier
+  uint16 private spdDivMod = 1000; // lower number higher multiplier
 
-  uint public reviverScorePenalty = 25;
-  uint public reviverTokenReward = 1000*10**18; //1000 tokens
-  uint private participationReward = 100*10**18; //100 tokens
+  uint32 private reviverReward = 250; //250 tokens
+
   address private admin;
-
-  uint public value0;
-  uint public value1;
-  bool public value2;
 
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
-  mapping (uint => address) private stakesTemp;
 
   constructor(address _nftAddress, address _priceFeedAddress) {
     admin = msg.sender;
@@ -69,13 +62,27 @@ contract EternalBattle is ERC721Holder {
     priceFeed = IPriceFeed(_priceFeedAddress);
   }
 
+  /**
+    * @dev
+    * sends token to contract
+    * requires price in range
+    * creates stakes struct,
+    */
   function createStake(uint _tokenId, uint8 _priceFeedId, uint8 _positionSize, bool long) external {
+    uint price = priceFeed.getPrice(_priceFeedId);
+    require(price > 10000 && price <= 1000000000, 'pbounds');
     require(_positionSize > 0 && _positionSize <= 255, 'bounds');
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
     stakes[_tokenId] = Stake(msg.sender, _priceFeedId, _positionSize, priceFeed.getPrice(_priceFeedId), long);
     emit StakeCreated(_tokenId, _priceFeedId, long);
   }
 
+  /**
+    * @dev
+    * gets price and score change
+    * returns token to owner
+    *
+    */
   function cancelStake(uint _tokenId) external {
     require(stakes[_tokenId].owner == msg.sender, 'only owner');
     require(nftContract.ownerOf(_tokenId) == address(this), 'only staked');
@@ -85,18 +92,39 @@ contract EternalBattle is ERC721Holder {
     emit StakeCanceled(_tokenId, win);
   }
 
-  // function reviveToken(uint _id0, uint _id1, bool reap) external {
-  //   require(nftContract.ownerOf(_id1) == msg.sender, 'only owner');
-  //   require(nftContract.ownerOf(_id0) == address(this), 'only staked');
-  //   (uint change, bool win) = getChange(_id0);
-  //   uint scoreBefore = nftContract.getCoinScore(_id0);
-  //   require((win != true && scoreBefore <= (change + 20)), 'not dead');
-  //   nftContract.safeTransferFrom(address(this), reap ? msg.sender : stakes[_id0].owner, _id0); // take owne0rship or return ownership
-  //   nftContract.changeScore(_id0, scoreBefore - 50, false, participationReward); // revive with 50 hp
-  //   nftContract.changeScore(_id1, reap ? reviverScorePenalty * 2 : reviverScorePenalty, false, reap ? participationReward : reviverTokenReward); // reaper minus 2x points and add rewards
-  //   emit TokenRevived(_id0, reap, _id1, msg.sender);
-  // }
+  /**
+    * @dev
+    * allows second token1 to revive token0 and take rewards
+    * returns token1 to owner
+    *
+    */
+  function reviveToken(uint _id0, uint _id1) external {
+    require(nftContract.ownerOf(_id1) == msg.sender, 'only owner');
+    require(nftContract.ownerOf(_id0) == address(this), 'only staked');
+    // GET CHANGE
+    Stake storage _stake = stakes[_id0];
+    uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
+    IEthemerals.Meral memory _meral = nftContract.getEthemeral(_id0);
+    bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
+    uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd);
+    change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
+    uint scoreBefore = _meral.score;
 
+    require((win != true && scoreBefore <= (change + 20)), 'not dead');
+    require(_meral.rewards > reviverReward, 'needs ELF');
+    nftContract.safeTransferFrom(address(this), stakes[_id0].owner, _id0);
+    nftContract.changeScore(_id0, uint16(scoreBefore - 100), win, 0); // reset scores to 100
+    nftContract.changeRewards(_id0, reviverReward, false, 1);
+    nftContract.changeRewards(_id1, reviverReward, true, 1);
+    emit TokenRevived(_id0, _id1);
+  }
+
+  /**
+    * @dev
+    * gets price difference in bps
+    * modifies the score change and rewards by atk/def/spd
+    * atk increase winning score change, def reduces losing score change, spd increase rewards
+    */
   function getChange(uint _tokenId) public view returns (uint, uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
@@ -129,9 +157,14 @@ contract EternalBattle is ERC721Holder {
     emit StakeCanceled(_tokenId, false);
   }
 
-  function setReviverRewards(uint _score, uint _token) external onlyAdmin() { //admin
-    reviverScorePenalty = _score;
-    reviverTokenReward = _token;
+  function setReviverRewards(uint32 _reward) external onlyAdmin() { //admin
+    reviverReward = _reward;
+  }
+
+  function setStatsDivMod(uint16 _atkDivMod, uint16 _defDivMod, uint16 _spdDivMod) external onlyAdmin() { //admin
+    atkDivMod = _atkDivMod;
+    defDivMod = _defDivMod;
+    spdDivMod = _spdDivMod;
   }
 
   function transferOwnership(address newAdmin) external onlyAdmin() { //admin
