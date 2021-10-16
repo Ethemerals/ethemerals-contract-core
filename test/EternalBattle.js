@@ -66,10 +66,10 @@ contract('ERC721', (accounts) => {
 		let mockPrice = 32 * 1000000;
 		await priceFeed.updatePrice(1, mockPrice);
 
-		let value = await game.totalSupply();
+		let totalSupply = await game.totalSupply();
 
-		for (let i = 11; i < value; i++) {
-			await battle.createStake(i, 1, 255, true, { from: player1 });
+		for (let i = 11; i < totalSupply; i++) {
+			await battle.createStake(i, 1, 100, true, { from: player1 });
 			meral = await game.getEthemeral(i);
 			console.log('token', meral.toString());
 		}
@@ -78,7 +78,7 @@ contract('ERC721', (accounts) => {
 
 		console.log('UNSTAKE');
 
-		for (let i = 11; i < value; i++) {
+		for (let i = 11; i < totalSupply; i++) {
 			await battle.cancelStake(i, { from: player1 });
 			meral = await game.getEthemeral(i);
 			console.log('token', meral.toString());
@@ -89,10 +89,10 @@ contract('ERC721', (accounts) => {
 		let mockPrice = 32 * 1000000;
 		await priceFeed.updatePrice(1, mockPrice);
 
-		let value = await game.totalSupply();
+		let totalSupply = await game.totalSupply();
 
-		for (let i = 11; i < value; i++) {
-			await battle.createStake(i, 1, 255, true, { from: player1 });
+		for (let i = 11; i < totalSupply; i++) {
+			await battle.createStake(i, 1, 100, true, { from: player1 });
 			meral = await game.getEthemeral(i);
 			console.log('token', meral.toString());
 		}
@@ -101,10 +101,46 @@ contract('ERC721', (accounts) => {
 
 		console.log('UNSTAKE');
 
-		for (let i = 11; i < value; i++) {
+		for (let i = 11; i < totalSupply; i++) {
 			await battle.cancelStake(i, { from: player1 });
 			meral = await game.getEthemeral(i);
 			console.log('token', meral.toString());
+		}
+	});
+
+	it.only('should run for a long time', async () => {
+		let mockPrice = 32 * 1000000;
+		await priceFeed.updatePrice(1, mockPrice);
+
+		let totalSupply = await game.totalSupply();
+
+		let run = 10;
+
+		function getRandomInt(max) {
+			return Math.floor(Math.random() * max);
+		}
+
+		while (run > 0) {
+			let stake = getRandomInt(255);
+			let price = mockPrice * (Math.random() * 0.5 + 0.75);
+
+			for (let i = 11; i < totalSupply; i++) {
+				await battle.createStake(i, 1, stake, true, { from: player1 });
+			}
+
+			await priceFeed.updatePrice(1, parseInt(price));
+
+			console.log('UNSTAKE');
+
+			for (let i = 11; i < totalSupply; i++) {
+				await battle.cancelStake(i, { from: player1 });
+				meral = await game.getEthemeral(i);
+				console.log('token', meral.toString());
+			}
+
+			console.log('stake', stake, 'price', price);
+			mockPrice = 32 * 1000000;
+			run -= 100;
 		}
 	});
 });

@@ -46,12 +46,16 @@ contract EternalBattle is ERC721Holder {
   IEthemerals nftContract;
   IPriceFeed priceFeed;
 
+  uint16 public atkDivMod = 3000; // lower number higher multiplier
+  uint16 public defDivMod = 2200; // lower number higher multiplier
+  uint16 public spdDivMod = 1000; // lower number higher multiplier
+
   uint public reviverScorePenalty = 25;
   uint public reviverTokenReward = 1000*10**18; //1000 tokens
   uint private participationReward = 100*10**18; //100 tokens
   address private admin;
 
-  uint8 public value0;
+  uint public value0;
   uint public value1;
   bool public value2;
 
@@ -75,9 +79,9 @@ contract EternalBattle is ERC721Holder {
   function cancelStake(uint _tokenId) external {
     require(stakes[_tokenId].owner == msg.sender, 'only owner');
     require(nftContract.ownerOf(_tokenId) == address(this), 'only staked');
-    (uint change, bool win) = getChange(_tokenId);
+    (uint change, uint reward, bool win) = getChange(_tokenId);
     nftContract.safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId);
-    nftContract.changeScore(_tokenId, uint16(change), win, 0); // change in bps
+    nftContract.changeScore(_tokenId, uint16(change), win, uint32(reward)); // change in bps
     emit StakeCanceled(_tokenId, win);
   }
 
@@ -93,19 +97,22 @@ contract EternalBattle is ERC721Holder {
   //   emit TokenRevived(_id0, reap, _id1, msg.sender);
   // }
 
-  function getChange(uint _tokenId) public view returns (uint, bool) {
+  function getChange(uint _tokenId) public view returns (uint, uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
     uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
+    uint reward;
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
 
     uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd);
     if(win) {
-      change = ((_meral.atk * change / 3000) + change) / 1000; // BONUS ATK
+      change = (_meral.atk * change / atkDivMod + change) / 1000; // BONUS ATK
+      // reward = (_meral.spd * change) / spdDivMod / 1000; // BONUS SPD
+      reward = _meral.spd * change / spdDivMod; // DOESNT MATCH JS WHY????
     } else {
-      change = ((change - (_meral.def * change / 3000)) ) / 1000; // BONUS ATK
+      change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
     }
-    return (change, win);
+    return (change, reward, win);
   }
 
   function calcBps(uint _x, uint _y) public pure returns (uint) {
