@@ -23,8 +23,8 @@ interface IEthemerals {
   function getEthemeral(uint _tokenId) external view returns(Meral memory);
 }
 
-interface IPriceFeed {
-  function getPrice(uint8 _id) external view returns (uint);
+interface IPriceFeedProvider {
+  function getLatestPrice(uint8 _id) external view returns (uint);
 }
 
 contract EternalBattle is ERC721Holder {
@@ -42,24 +42,32 @@ contract EternalBattle is ERC721Holder {
     bool long;
   }
 
+  struct GamePair {
+    bool active;
+    uint16 longs;
+    uint16 shorts;
+  }
+
   IEthemerals nftContract;
-  IPriceFeed priceFeed;
+  IPriceFeedProvider priceFeed;
 
-  uint16 private atkDivMod = 3000; // lower number higher multiplier
-  uint16 private defDivMod = 2200; // lower number higher multiplier
-  uint16 private spdDivMod = 1000; // lower number higher multiplier
-
-  uint32 private reviverReward = 250; //250 tokens
+  uint16 public atkDivMod = 3000; // lower number higher multiplier
+  uint16 public defDivMod = 2200; // lower number higher multiplier
+  uint16 public spdDivMod = 500; // lower number higher multiplier
+  uint32 public reviverReward = 300; //500 tokens
 
   address private admin;
 
   // mapping tokenId to stake;
   mapping (uint => Stake) private stakes;
 
+  // mapping of active longs/shorts to priceIds
+  mapping (uint8 => GamePair) private gamePairs;
+
   constructor(address _nftAddress, address _priceFeedAddress) {
     admin = msg.sender;
     nftContract = IEthemerals(_nftAddress);
-    priceFeed = IPriceFeed(_priceFeedAddress);
+    priceFeed = IPriceFeedProvider(_priceFeedAddress);
   }
 
   /**
@@ -69,12 +77,32 @@ contract EternalBattle is ERC721Holder {
     * creates stakes struct,
     */
   function createStake(uint _tokenId, uint8 _priceFeedId, uint8 _positionSize, bool long) external {
-    uint price = priceFeed.getPrice(_priceFeedId);
-    require(price > 10000 && price <= 1000000000, 'pbounds');
-    require(_positionSize > 0 && _positionSize <= 255, 'bounds');
+    require(gamePairs[_priceFeedId].active, 'not active');
+    uint price = priceFeed.getLatestPrice(_priceFeedId);
+    require(price > 10000, 'pbounds');
+    require(_positionSize > 25 && _positionSize <= 255, 'bounds');
+    IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
+    require(_meral.rewards > reviverReward, 'needs ELF');
     nftContract.safeTransferFrom(msg.sender, address(this), _tokenId);
-    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, _positionSize, priceFeed.getPrice(_priceFeedId), long);
+    stakes[_tokenId] = Stake(msg.sender, _priceFeedId, _positionSize, price, long);
+
+    _changeGamePair(_priceFeedId, long, true);
     emit StakeCreated(_tokenId, _priceFeedId, long);
+  }
+
+
+  /**
+    * @dev
+    * adds / removes long shorts
+    * does not check underflow should be fine
+    */
+  function _changeGamePair(uint8 _priceFeedId, bool _long, bool _stake) internal {
+    GamePair memory _gamePair  = gamePairs[_priceFeedId];
+    if(_long) {
+      gamePairs[_priceFeedId].longs = _stake ? _gamePair.longs + 1 : _gamePair.longs -1;
+    } else {
+      gamePairs[_priceFeedId].shorts = _stake ? _gamePair.shorts + 1 : _gamePair.shorts -1;
+    }
   }
 
   /**
@@ -89,6 +117,8 @@ contract EternalBattle is ERC721Holder {
     (uint change, uint reward, bool win) = getChange(_tokenId);
     nftContract.safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId);
     nftContract.changeScore(_tokenId, uint16(change), win, uint32(reward)); // change in bps
+
+    _changeGamePair(stakes[_tokenId].priceFeedId, stakes[_tokenId].long, false);
     emit StakeCanceled(_tokenId, win);
   }
 
@@ -103,7 +133,7 @@ contract EternalBattle is ERC721Holder {
     require(nftContract.ownerOf(_id0) == address(this), 'only staked');
     // GET CHANGE
     Stake storage _stake = stakes[_id0];
-    uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
+    uint priceEnd = priceFeed.getLatestPrice(_stake.priceFeedId);
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_id0);
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
     uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd);
@@ -116,6 +146,8 @@ contract EternalBattle is ERC721Holder {
     nftContract.changeScore(_id0, uint16(scoreBefore - 100), win, 0); // reset scores to 100
     nftContract.changeRewards(_id0, reviverReward, false, 1);
     nftContract.changeRewards(_id1, reviverReward, true, 1);
+
+    _changeGamePair(_stake.priceFeedId, _stake.long, false);
     emit TokenRevived(_id0, _id1);
   }
 
@@ -128,7 +160,7 @@ contract EternalBattle is ERC721Holder {
   function getChange(uint _tokenId) public view returns (uint, uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
-    uint priceEnd = priceFeed.getPrice(_stake.priceFeedId);
+    uint priceEnd = priceFeed.getLatestPrice(_stake.priceFeedId);
     uint reward;
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
 
@@ -136,7 +168,18 @@ contract EternalBattle is ERC721Holder {
     if(win) {
       change = (_meral.atk * change / atkDivMod + change) / 1000; // BONUS ATK
       // reward = (_meral.spd * change) / spdDivMod / 1000; // BONUS SPD
-      reward = _meral.spd * change / spdDivMod; // DOESNT MATCH JS WHY????
+      uint16 longs = gamePairs[stakes[_tokenId].priceFeedId].longs;
+      uint16 shorts = gamePairs[stakes[_tokenId].priceFeedId].shorts;
+      uint counterTradeBonus = 1;
+      if(!_stake.long && longs > shorts) {
+        counterTradeBonus = ((longs * 1000) / shorts) / 2000;
+      }
+      if(_stake.long && shorts > longs) {
+        counterTradeBonus = ((shorts * 1000) / longs) / 2000;
+      }
+      counterTradeBonus = counterTradeBonus > 5 ? 5 : counterTradeBonus;
+      reward = _meral.spd * change / spdDivMod * counterTradeBonus; // DOESNT MATCH JS WHY????
+
     } else {
       change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
     }
@@ -152,8 +195,20 @@ contract EternalBattle is ERC721Holder {
     return stakes[_tokenId];
   }
 
+  function getGamePair(uint8 _gameIndex) external view returns (GamePair memory) {
+    return gamePairs[_gameIndex];
+  }
+
+  function resetGamePair(uint8 _gameIndex, bool _active) external onlyAdmin() { //admin
+    gamePairs[_gameIndex].active = _active;
+    gamePairs[_gameIndex].longs = 0;
+    gamePairs[_gameIndex].shorts = 0;
+  }
+
   function cancelStakeAdmin(uint _tokenId) external onlyAdmin() { //admin
     nftContract.safeTransferFrom(address(this), stakes[_tokenId].owner, _tokenId);
+
+    _changeGamePair(stakes[_tokenId].priceFeedId, stakes[_tokenId].long, false);
     emit StakeCanceled(_tokenId, false);
   }
 
@@ -173,7 +228,7 @@ contract EternalBattle is ERC721Holder {
   }
 
   function setPriceFeedContract(address _pfAddress) external onlyAdmin() { //admin
-    priceFeed = IPriceFeed(_pfAddress);
+    priceFeed = IPriceFeedProvider(_pfAddress);
   }
 
   modifier onlyAdmin() {
