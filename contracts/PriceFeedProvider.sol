@@ -8,7 +8,7 @@ interface IPriceFeedProvider {
      * Returns the latest price for a price feed.
      * It reverts if the feed id is invalid: there was no price feed address provided for the given id yet
      */
-    function getLatestPrice(uint256 _priceFeedId)
+    function getLatestPrice(uint8 _priceFeedId)
         external
         view
         returns (int256);
@@ -22,7 +22,7 @@ contract PriceFeedProvider is IPriceFeedProvider {
 
     address admin;
 
-    mapping(uint256 => address) private priceFeeds;
+    mapping(uint8 => address) private priceFeeds;
 
     constructor() {
         admin = msg.sender;
@@ -32,7 +32,7 @@ contract PriceFeedProvider is IPriceFeedProvider {
      * Returns the latest price for a price feed.
      * It reverts if the feed id is invalid: there was no price feed address provided for the given id yet
      */
-    function getLatestPrice(uint256 _priceFeedId)
+    function getLatestPrice(uint8 _priceFeedId)
         external
         view
         override
@@ -51,7 +51,7 @@ contract PriceFeedProvider is IPriceFeedProvider {
     /**
      * Inserts or updates the price feed address for the given price feed id
      */
-    function upsertFeed(uint256 _id, address _dataFeedAddress) external {
+    function upsertFeed(uint8 _id, address _dataFeedAddress) external {
         require(msg.sender == admin, "admin only");
         priceFeeds[_id] = _dataFeedAddress;
     }

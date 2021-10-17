@@ -12,7 +12,7 @@ module.exports = async function (deployer) {
 	await deployer.deploy(EternalBattle, nftAddress, PriceFeedMock.address);
 };
 
-contract('ERC721', (accounts) => {
+contract('EternalBattle', (accounts) => {
 	let game;
 	const [admin, player1, player2, player3] = [accounts[0], accounts[1], accounts[2], accounts[3]];
 
@@ -38,12 +38,26 @@ contract('ERC721', (accounts) => {
 
 		await game.addDelegate(battle.address, true);
 		await game.setAllowDelegates(true, { from: player1 });
+		await battle.resetGamePair(1, true);
+		await battle.resetGamePair(2, true);
 	});
 
-	it('should not allow admin only functions', async () => {
+	it('should not allow and allow admin only functions', async () => {
 		await expectRevert(battle.transferOwnership(player2, { from: player1 }), 'admin only');
 		await expectRevert(battle.setPriceFeedContract(player2, { from: player1 }), 'admin only');
 		await expectRevert(battle.setStatsDivMod(1000, 1000, 1000, { from: player1 }), 'admin only');
+		await expectRevert(battle.setReviverRewards(1000, { from: player1 }), 'admin only');
+		await battle.setReviverRewards(1000);
+		value = await battle.reviverReward();
+		assert(value.toNumber() === 1000);
+
+		await battle.setStatsDivMod(1000, 1000, 1000);
+		value = await battle.atkDivMod();
+		assert(value.toNumber() === 1000);
+		value = await battle.defDivMod();
+		assert(value.toNumber() === 1000);
+		value = await battle.spdDivMod();
+		assert(value.toNumber() === 1000);
 
 		let mockPrice = 32 * 1000000;
 		let token = 11;
@@ -62,6 +76,9 @@ contract('ERC721', (accounts) => {
 
 		await game.setAllowDelegates(true, { from: player2 });
 		await game.transferFrom(player1, player2, token, { from: player1 });
+
+		await priceFeed.updatePrice(1, 1000);
+		await expectRevert(battle.createStake(token, 1, 100, true, { from: player2 }), 'pbounds');
 
 		await priceFeed.updatePrice(1, mockPrice);
 		await battle.createStake(token, 1, 100, true, { from: player2 });
@@ -108,11 +125,25 @@ contract('ERC721', (accounts) => {
 
 		value = await game.ownerOf(token);
 		assert(value === player1);
+
+		await game.changeRewards(token, 5000, false, 0);
+		await game.changeRewards(token, 100, true, 0);
+		await expectRevert(battle.createStake(token, 1, 255, { from: player1 }), 'needs ELF');
 	});
 
 	it('should transferOwnership', async () => {
 		await battle.transferOwnership(player1, { from: admin });
 		await battle.setStatsDivMod(5000, 6000, 7000, { from: player1 });
+	});
+
+	it('should reset and get Game pair', async () => {
+		await expectRevert(battle.resetGamePair(1, true, { from: player1 }), 'admin only');
+
+		await battle.resetGamePair(1, true);
+		value = await battle.getGamePair(1);
+		console.log(value.toString());
+		await battle.resetGamePair(1, false);
+		await expectRevert(battle.createStake(11, 1, 255, { from: player1 }), 'not active');
 	});
 
 	it('should revive 10 tokens', async () => {
@@ -145,6 +176,74 @@ contract('ERC721', (accounts) => {
 
 		await priceFeed.updatePrice(1, parseInt(mockPrice * 1.1));
 
+		value = await battle.getGamePair(1);
+		console.log(value);
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
+
+		await battle.cancelStake(token, { from: player1 });
+		value = await game.ownerOf(token);
+		assert(value == player1);
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
+	});
+
+	it('should work with 8 or 18 decimal price', async () => {
+		let mockPrice = 828935030000000;
+		await priceFeed.updatePrice(1, mockPrice);
+
+		let token = 11;
+		await battle.createStake(token, 1, 100, true, { from: player1 });
+		value = await game.ownerOf(token);
+		assert(value == battle.address);
+
+		await priceFeed.updatePrice(1, parseInt(mockPrice * 1.1));
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
+
+		await battle.cancelStake(token, { from: player1 });
+		value = await game.ownerOf(token);
+		assert(value == player1);
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
+
+		//
+		mockPrice = 4951033;
+		await priceFeed.updatePrice(1, mockPrice);
+
+		token = 11;
+		await battle.createStake(token, 1, 100, true, { from: player1 });
+		value = await game.ownerOf(token);
+		assert(value == battle.address);
+
+		await priceFeed.updatePrice(1, parseInt(mockPrice * 1.1));
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
+
+		await battle.cancelStake(token, { from: player1 });
+		value = await game.ownerOf(token);
+		assert(value == player1);
+
+		meral = await game.getEthemeral(token);
+		console.log('token', meral.toString());
+
+		//
+		mockPrice = web3.utils.toBN('87758807471949350000');
+		await priceFeed.updatePrice(1, mockPrice);
+
+		token = 11;
+		await battle.createStake(token, 1, 100, true, { from: player1 });
+		value = await game.ownerOf(token);
+		assert(value == battle.address);
+
+		mockPrice = web3.utils.toBN('96534607471949350000');
+		await priceFeed.updatePrice(1, mockPrice);
+
 		meral = await game.getEthemeral(token);
 		console.log('token', meral.toString());
 
@@ -166,16 +265,20 @@ contract('ERC721', (accounts) => {
 			await battle.createStake(i, 1, 100, true, { from: player1 });
 			meral = await game.getEthemeral(i);
 			console.log('token', meral.toString());
+			gamepair = await battle.getGamePair(1);
+			console.log(gamepair.toString());
 		}
 
 		await priceFeed.updatePrice(1, parseInt(mockPrice * 1.1));
 
-		console.log('UNSTAKE');
+		console.log('UNSTAKE'); // 43 29
 
 		for (let i = 11; i < totalSupply; i++) {
 			await battle.cancelStake(i, { from: player1 });
 			meral = await game.getEthemeral(i);
 			console.log('token', meral.toString());
+			gamepair = await battle.getGamePair(1);
+			console.log(gamepair.toString());
 		}
 	});
 
@@ -191,7 +294,13 @@ contract('ERC721', (accounts) => {
 			console.log('token', meral.toString());
 		}
 
+		// counter trade
+		await game.setAllowDelegates(true);
+		await battle.createStake(5, 1, 100, false, { from: admin });
 		await priceFeed.updatePrice(1, parseInt(mockPrice - mockPrice * 0.1));
+		await battle.cancelStake(5, { from: admin });
+		meral = await game.getEthemeral(5);
+		console.log('token', meral.toString());
 
 		console.log('UNSTAKE');
 
@@ -313,42 +422,42 @@ contract('ERC721', (accounts) => {
 		}
 	});
 
-	it('should run for a long time', async () => {
-		let mockPrice = 32 * 1000000;
-		await priceFeed.updatePrice(1, mockPrice);
+	// it('should run for a long time', async () => {
+	// 	let mockPrice = 32 * 1000000;
+	// 	await priceFeed.updatePrice(1, mockPrice);
 
-		let totalSupply = await game.totalSupply();
+	// 	let totalSupply = await game.totalSupply();
 
-		let run = 0;
+	// 	let run = 0;
 
-		function getRandomInt(max) {
-			return Math.floor(Math.random() * max);
-		}
+	// 	function getRandomInt(max) {
+	// 		return Math.floor(Math.random() * max);
+	// 	}
 
-		while (run < 100) {
-			// let stake = getRandomInt(255);
-			// let price = mockPrice * (Math.random() * 0.5 + 0.75);
-			let stake = getRandomInt(130) + 50;
-			let price = mockPrice * (Math.random() * 0.2 + 0.9);
+	// 	while (run < 100) {
+	// 		// let stake = getRandomInt(255);
+	// 		// let price = mockPrice * (Math.random() * 0.5 + 0.75);
+	// 		let stake = getRandomInt(130) + 50;
+	// 		let price = mockPrice * (Math.random() * 0.2 + 0.9);
 
-			for (let i = 11; i < totalSupply; i++) {
-				await battle.createStake(i, 1, stake, true, { from: player1 });
-			}
+	// 		for (let i = 11; i < totalSupply; i++) {
+	// 			await battle.createStake(i, 1, stake, true, { from: player1 });
+	// 		}
 
-			await priceFeed.updatePrice(1, parseInt(price));
+	// 		await priceFeed.updatePrice(1, parseInt(price));
 
-			console.log('UNSTAKE');
+	// 		console.log('UNSTAKE');
 
-			for (let i = 11; i < totalSupply; i++) {
-				await battle.cancelStake(i, { from: player1 });
-				meral = await game.getEthemeral(i);
-				console.log(`token_${i}`, meral.toString());
-			}
+	// 		for (let i = 11; i < totalSupply; i++) {
+	// 			await battle.cancelStake(i, { from: player1 });
+	// 			meral = await game.getEthemeral(i);
+	// 			console.log(`token_${i}`, meral.toString());
+	// 		}
 
-			console.log('run', run, 'stake', stake, 'price', price);
-			mockPrice = 32 * 1000000;
-			run += 1;
-			await time.increase(30);
-		}
-	});
+	// 		console.log('run', run, 'stake', stake, 'price', price);
+	// 		mockPrice = 32 * 1000000;
+	// 		run += 1;
+	// 		await time.increase(30);
+	// 	}
+	// });
 });
