@@ -4,7 +4,7 @@ pragma solidity ^0.8.3;
 
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "../openzep/token/ERC721/utils/ERC721Holder.sol";
-
+import "./IPriceFeedProvider.sol";
 
 interface IEthemerals {
 
@@ -21,10 +21,6 @@ interface IEthemerals {
   function changeScore(uint _tokenId, uint16 offset, bool add, uint32 amount) external;
   function changeRewards(uint _tokenId, uint32 offset, bool add, uint8 action) external;
   function getEthemeral(uint _tokenId) external view returns(Meral memory);
-}
-
-interface IPriceFeedProvider {
-  function getLatestPrice(uint8 _id) external view returns (uint);
 }
 
 contract EternalBattle is ERC721Holder {
@@ -53,7 +49,7 @@ contract EternalBattle is ERC721Holder {
 
   uint16 public atkDivMod = 3000; // lower number higher multiplier
   uint16 public defDivMod = 2200; // lower number higher multiplier
-  uint16 public spdDivMod = 500; // lower number higher multiplier
+  uint16 public spdDivMod = 200; // lower number higher multiplier
   uint32 public reviverReward = 300; //500 tokens
 
   address private admin;
@@ -78,7 +74,7 @@ contract EternalBattle is ERC721Holder {
     */
   function createStake(uint _tokenId, uint8 _priceFeedId, uint8 _positionSize, bool long) external {
     require(gamePairs[_priceFeedId].active, 'not active');
-    uint price = priceFeed.getLatestPrice(_priceFeedId);
+    uint price = uint(priceFeed.getLatestPrice(_priceFeedId));
     require(price > 10000, 'pbounds');
     require(_positionSize > 25 && _positionSize <= 255, 'bounds');
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
@@ -129,11 +125,11 @@ contract EternalBattle is ERC721Holder {
     *
     */
   function reviveToken(uint _id0, uint _id1) external {
+  require(nftContract.ownerOf(_id0) == address(this), 'only staked');
     require(nftContract.ownerOf(_id1) == msg.sender, 'only owner');
-    require(nftContract.ownerOf(_id0) == address(this), 'only staked');
     // GET CHANGE
     Stake storage _stake = stakes[_id0];
-    uint priceEnd = priceFeed.getLatestPrice(_stake.priceFeedId);
+    uint priceEnd = uint(priceFeed.getLatestPrice(_stake.priceFeedId));
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_id0);
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
     uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd);
@@ -160,7 +156,7 @@ contract EternalBattle is ERC721Holder {
   function getChange(uint _tokenId) public view returns (uint, uint, bool) {
     Stake storage _stake = stakes[_tokenId];
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_tokenId);
-    uint priceEnd = priceFeed.getLatestPrice(_stake.priceFeedId);
+    uint priceEnd = uint(priceFeed.getLatestPrice(_stake.priceFeedId));
     uint reward;
     bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
 

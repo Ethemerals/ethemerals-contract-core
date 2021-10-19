@@ -101,9 +101,12 @@ contract('EternalBattle', (accounts) => {
 		}
 
 		while (run < 25) {
-			let stake = getRandomInt(130) + 50;
-			let price1 = parseInt(mockPrice1 * (Math.random() * 0.1 + 0.95));
-			let price2 = parseInt(mockPrice2 * (Math.random() * 0.1 + 0.95));
+			let stake = getRandomInt(100) + 154;
+			let mult1 = Math.random() * 0.025 + 0.9875;
+			let mult2 = Math.random() * 0.025 + 0.9875;
+			let price1 = parseInt(mockPrice1 * mult1);
+			let price2 = parseInt(mockPrice2 * mult2);
+			console.log(mult1, mult2, stake);
 
 			for (let i = 11; i < totalSupply; i++) {
 				let long = true;
@@ -112,7 +115,7 @@ contract('EternalBattle', (accounts) => {
 				} else {
 					long = false;
 				}
-				await battle.createStake(i, getRandomInt(2) + 1, 255, long, { from: player1 });
+				await battle.createStake(i, getRandomInt(2) + 1, stake, long, { from: player1 });
 			}
 
 			await aggregatorV3Mock.updateAnswer(price1);
