@@ -82,12 +82,12 @@ contract('EternalBattle', (accounts) => {
 	it('should run for a long time on two price feeds', async () => {
 		await priceFeedProvider.upsertFeed(1, aggregatorV3Mock.address);
 
-		let aggregatorV3Mock2 = await AggregatorV3Mock.new(decimals, 2);
+		let aggregatorV3Mock2 = await AggregatorV3Mock.new(18, 2);
 		await priceFeedProvider.upsertFeed(2, aggregatorV3Mock2.address);
 
 		////
-		let mockPrice1 = 32 * 1000000;
-		let mockPrice2 = 64 * 1000000;
+		let mockPrice1 = 6225287000000;
+		let mockPrice2 = 925732581101064;
 
 		await aggregatorV3Mock.updateAnswer(mockPrice1);
 		await aggregatorV3Mock2.updateAnswer(mockPrice2);
@@ -102,8 +102,8 @@ contract('EternalBattle', (accounts) => {
 
 		while (run < 25) {
 			let stake = getRandomInt(100) + 154;
-			let mult1 = Math.random() * 0.025 + 0.9875;
-			let mult2 = Math.random() * 0.025 + 0.9875;
+			let mult1 = Math.random() * 0.05 + 0.975;
+			let mult2 = Math.random() * 0.05 + 0.975;
 			let price1 = parseInt(mockPrice1 * mult1);
 			let price2 = parseInt(mockPrice2 * mult2);
 			console.log(mult1, mult2, stake);
@@ -115,7 +115,7 @@ contract('EternalBattle', (accounts) => {
 				} else {
 					long = false;
 				}
-				await battle.createStake(i, getRandomInt(2) + 1, stake, long, { from: player1 });
+				await battle.createStake(i, getRandomInt(2) + 1, 255, long, { from: player1 });
 			}
 
 			await aggregatorV3Mock.updateAnswer(price1);

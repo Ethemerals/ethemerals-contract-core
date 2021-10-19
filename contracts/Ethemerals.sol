@@ -9,6 +9,7 @@ import "../openzep/token/ERC721/ERC721.sol";
 import "../openzep/token/ERC20/IERC20.sol";
 import "../openzep/access/Ownable.sol";
 
+
 contract Ethemerals is ERC721, Ownable {
 
   event ChangeScore(uint tokenId, uint16 score, bool add, uint32 rewards);

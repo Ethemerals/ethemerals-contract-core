@@ -5,23 +5,8 @@ pragma solidity ^0.8.3;
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "../openzep/token/ERC721/utils/ERC721Holder.sol";
 import "./IPriceFeedProvider.sol";
+import "./IEthemerals.sol";
 
-interface IEthemerals {
-
-  struct Meral {
-    uint16 score;
-    uint32 rewards;
-    uint16 atk;
-    uint16 def;
-    uint16 spd;
-  }
-
-  function safeTransferFrom(address from, address to, uint256 tokenId) external;
-  function ownerOf(uint256 _tokenId) external view returns (address);
-  function changeScore(uint _tokenId, uint16 offset, bool add, uint32 amount) external;
-  function changeRewards(uint _tokenId, uint32 offset, bool add, uint8 action) external;
-  function getEthemeral(uint _tokenId) external view returns(Meral memory);
-}
 
 contract EternalBattle is ERC721Holder {
 
@@ -47,10 +32,10 @@ contract EternalBattle is ERC721Holder {
   IEthemerals nftContract;
   IPriceFeedProvider priceFeed;
 
-  uint16 public atkDivMod = 3000; // lower number higher multiplier
-  uint16 public defDivMod = 2200; // lower number higher multiplier
+  uint16 public atkDivMod = 1400; // lower number higher multiplier
+  uint16 public defDivMod = 1000; // lower number higher multiplier
   uint16 public spdDivMod = 200; // lower number higher multiplier
-  uint32 public reviverReward = 300; //500 tokens
+  uint32 public reviverReward = 500; //500 tokens
 
   address private admin;
 
@@ -136,7 +121,7 @@ contract EternalBattle is ERC721Holder {
     change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
     uint scoreBefore = _meral.score;
 
-    require((win != true && scoreBefore <= (change + 20)), 'not dead');
+    require((win != true && scoreBefore <= (change + 25)), 'not dead');
     require(_meral.rewards > reviverReward, 'needs ELF');
     nftContract.safeTransferFrom(address(this), stakes[_id0].owner, _id0);
     nftContract.changeScore(_id0, uint16(scoreBefore - 100), win, 0); // reset scores to 100
@@ -168,13 +153,13 @@ contract EternalBattle is ERC721Holder {
       uint16 shorts = gamePairs[stakes[_tokenId].priceFeedId].shorts;
       uint counterTradeBonus = 1;
       if(!_stake.long && longs > shorts) {
-        counterTradeBonus = ((longs * 1000) / shorts) / 2000;
+        counterTradeBonus = longs / shorts;
       }
       if(_stake.long && shorts > longs) {
-        counterTradeBonus = ((shorts * 1000) / longs) / 2000;
+        counterTradeBonus = shorts / longs;
       }
       counterTradeBonus = counterTradeBonus > 5 ? 5 : counterTradeBonus;
-      reward = _meral.spd * change / spdDivMod * counterTradeBonus; // DOESNT MATCH JS WHY????
+      reward = (_meral.spd * change / spdDivMod) * counterTradeBonus; // DOESNT MATCH JS WHY????
 
     } else {
       change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK

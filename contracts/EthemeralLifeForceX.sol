@@ -6,22 +6,7 @@ import "../openzep/utils/math/SafeMath.sol";
 import "../openzep/token/ERC20/extensions/ERC20Burnable.sol";
 import "../openzep/utils/Context.sol";
 import "../openzep/access/Ownable.sol";
-
-interface IEthemerals {
-
-  // Basic minimal struct for an Ethemeral, addon contracts for inventory and stats
-  struct Meral {
-    uint16 score;
-    uint32 rewards;
-    uint16 atk;
-    uint16 def;
-    uint16 spd;
-  }
-
-  function ownerOf(uint256 _tokenId) external view returns (address);
-  function totalSupply() external view returns (uint256);
-  function getEthemeral(uint _tokenId) external view returns(Meral memory);
-}
+import "./IEthemerals.sol";
 
 /**
  *
