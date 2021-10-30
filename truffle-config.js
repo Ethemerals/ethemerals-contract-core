@@ -53,6 +53,13 @@ module.exports = {
 			from: process.env.ADDRESS,
 			// gas: 8500000,           // Gas sent with each transaction (default: ~6700000)
 		},
+		arbitrum_rinkeby: {
+			provider: () => new HDWalletProvider(process.env.SEED, `https://arbitrum-rinkeby.infura.io/v3/${process.env.PROJECTID}`),
+			network_id: 421611,
+			from: process.env.ADDRESS,
+			gas: 501665430,           // Gas sent with each transaction (default: ~6700000)
+			gasPrice: 100000000,
+		},
 		// Useful for testing. The `development` name is special - truffle uses it by default
 		// if it's defined here and no other network is specified at the command line.
 		// You should run a client (like ganache-cli, geth or parity) in a separate terminal
@@ -106,7 +113,7 @@ module.exports = {
 				// See the solidity docs for advice about optimization and evmVersion
 				optimizer: {
 					enabled: true,
-					runs: 200,
+					runs: 1000,
 				},
 				//  evmVersion: "byzantium"
 			},
