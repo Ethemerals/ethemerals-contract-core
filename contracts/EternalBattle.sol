@@ -159,7 +159,7 @@ contract EternalBattle is ERC721Holder {
         counterTradeBonus = shorts / longs;
       }
       counterTradeBonus = counterTradeBonus > 5 ? 5 : counterTradeBonus;
-      reward = (_meral.spd * change / spdDivMod) * counterTradeBonus; // DOESNT MATCH JS WHY????
+      reward = (_meral.spd * change / spdDivMod) * counterTradeBonus;
 
     } else {
       change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
