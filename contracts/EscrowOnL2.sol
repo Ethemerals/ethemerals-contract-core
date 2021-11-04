@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
+import "../openzep/token/ERC721/utils/ERC721Holder.sol";
 import "../openzep/access/Ownable.sol";
 import "../openzep/security/Pausable.sol";
 import "./EthemeralsOnL2.sol";
 
-contract EscrowOnL2 is Ownable, Pausable {
+contract EscrowOnL2 is Ownable, Pausable, ERC721Holder {
     // nonce is a sequence that identifes a transfer - on the L1 chain when the transfer is processed the nonce can be verified
     uint256 public nonce;
     // nonces coming from the L1 chain that are already processed
@@ -80,9 +81,9 @@ contract EscrowOnL2 is Ownable, Pausable {
             processedNonces[otherChainNonce] == false,
             "transfer already processed"
         );
-        address currentOwner = ethemerals.ownerOf(_tokenId);
+        bool existingToken = ethemerals.exists(_tokenId);
         // token does not exist yet
-        if (currentOwner == address(0)) {
+        if (!existingToken) {
             ethemerals.migrateMeral(
                 _tokenId,
                 owner,
@@ -94,7 +95,9 @@ contract EscrowOnL2 is Ownable, Pausable {
             );
         }
         // token already existed on L2 but was put on escrow
-        else if (currentOwner == address(this)) {
+        else if (
+            existingToken && ethemerals.ownerOf(_tokenId) == address(this)
+        ) {
             ethemerals.updateMeral(
                 _tokenId,
                 owner,
@@ -107,7 +110,7 @@ contract EscrowOnL2 is Ownable, Pausable {
         }
         // other current owner is not acceptible: the token should not exist or should be in the escrow if the user could initiate the transfer from L1
         else {
-            revert("Tokens already exists");
+            revert("Tokens already exists and not in the escrow");
         }
         processedNonces[otherChainNonce] = true;
     }

@@ -106,26 +106,6 @@ contract Ethemerals is ERC721, Ownable {
     }
 
     /**
-     * @dev migrates (mints) an Ethemeral
-     * ment to be used during migration from L1 to L2
-     * sets the supplied id, score, rewards,  atk, def, spd
-     */
-    function migrateMeral(
-        uint256 _id,
-        address recipient,
-        uint16 _score,
-        uint16 _rewards,
-        uint16 _atk,
-        uint16 _def,
-        uint16 _spd
-    ) external onlyOwner {
-        _safeMint(recipient, _id);
-        meralSupply++;
-        allMerals.push(Meral(_score, _rewards, _atk, _def, _spd));
-        emit Mint(_id, _rewards, _atk, _def, _spd);
-    }
-
-    /**
      * @dev Mints an Ethemeral
      * sets score and startingELF
      * sets random [atk, def, spd]

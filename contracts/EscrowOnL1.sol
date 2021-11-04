@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
+import "../openzep/token/ERC721/utils/ERC721Holder.sol";
 import "../openzep/access/Ownable.sol";
 import "../openzep/security/Pausable.sol";
 import "./IEthemerals.sol";
 
-contract EscrowOnL1 is Ownable, Pausable {
+contract EscrowOnL1 is Ownable, Pausable, ERC721Holder {
     // nonce is a sequence that identifes a transfer - on the L2 chain when the transfer is processed the nonce can be verified
     uint256 public nonce;
     // nonces coming from the L2 chain that are already processed
@@ -69,6 +70,7 @@ contract EscrowOnL1 is Ownable, Pausable {
      * - contract is not paused
      * - token is in the escrow
      * - nonce is not yet processed
+     * - only the contract owner which is the bridge component can call this function
      */
     function migrate(
         uint256 _tokenId,
@@ -90,7 +92,7 @@ contract EscrowOnL1 is Ownable, Pausable {
             processedNonces[otherChainNonce] == false,
             "transfer already processed"
         );
-        ethemerals.safeTransferFrom(owner, address(this), _tokenId);
+        ethemerals.safeTransferFrom(address(this), owner, _tokenId);
         ethemerals.changeScore(_tokenId, scoreOffset, scoreAdd, scoreAmount);
         ethemerals.changeRewards(
             _tokenId,

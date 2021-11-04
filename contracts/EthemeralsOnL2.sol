@@ -18,13 +18,13 @@ contract EthemeralsOnL2 is ERC721, Ownable {
         uint8 action
     );
     event PriceChange(uint256 price);
-    event Mint(uint256 id, uint16 elf, uint16 atk, uint16 def, uint16 spd);
+    event Mint(uint256 id, uint32 elf, uint16 atk, uint16 def, uint16 spd);
     event DelegateChange(address indexed delegate, bool add);
     event AllowDelegatesChange(address indexed user, bool allow);
     event UpdateMeral(
         uint256 id,
         uint16 score,
-        uint16 reward,
+        uint32 reward,
         uint16 atk,
         uint16 def,
         uint16 spd
@@ -61,10 +61,13 @@ contract EthemeralsOnL2 is ERC721, Ownable {
     uint256 public mintPrice = 1 * 10**18; // change once deployed
 
     // ELF at birth
-    uint16 public startingELF = 2000; // need to * 10 ** 18
+    uint32 public startingELF = 2000; // need to * 10 ** 18
 
     // ELF ERC20 address
     address private tokenAddress;
+
+    // Escrow address
+    address private escrowAddress;
 
     // Arrays of Ethemerals
     mapping(uint256 => Meral) private allMerals;
@@ -116,18 +119,19 @@ contract EthemeralsOnL2 is ERC721, Ownable {
     /**
      * @dev migrates (mints) an Ethemeral
      * ment to be used during transfer from L1 to L2 when the meral does not exist in this chain yet
+     * only the escrow contract can call this function
      * sets the supplied id, score, rewards,  atk, def, spd
      */
     function migrateMeral(
         uint256 _id,
         address recipient,
         uint16 _score,
-        uint16 _rewards,
+        uint32 _rewards,
         uint16 _atk,
         uint16 _def,
         uint16 _spd
-    ) external onlyOwner {
-        require(ownerOf(_id) == address(0), "Token already exists");
+    ) external onlyEscrow {
+        require(!_exists(_id), "Token already exists");
         _safeMint(recipient, _id);
         meralSupply++;
         allMerals[_id] = Meral(_score, _rewards, _atk, _def, _spd);
@@ -137,6 +141,7 @@ contract EthemeralsOnL2 is ERC721, Ownable {
     /**
      * @dev updates an existing meral
      * ment to be used during transfer from L1 to L2 when the meral already exists on this chain
+     * only the escrow contract can call this function
      * sets the supplied owner, score, rewards,  atk, def, spd
      */
     function updateMeral(
@@ -147,15 +152,15 @@ contract EthemeralsOnL2 is ERC721, Ownable {
         uint16 _atk,
         uint16 _def,
         uint16 _spd
-    ) external onlyOwner {
-        address currentOwner = ownerOf(_id);
-        require(currentOwner != address(0), "Token does not exist yet");
+    ) external onlyEscrow {
+        require(_exists(_id), "Token does not exist yet");
         Meral storage meral = allMerals[_id];
         meral.score = _score;
         meral.rewards = _rewards;
         meral.atk = _atk;
         meral.def = _def;
         meral.spd = _spd;
+        address currentOwner = ownerOf(_id);
         if (currentOwner != owner) {
             safeTransferFrom(currentOwner, owner, _id);
         }
@@ -388,5 +393,27 @@ contract EthemeralsOnL2 is ERC721, Ownable {
         }
 
         return super.isApprovedForAll(_owner, _operator);
+    }
+
+    function exists(uint256 tokenId) public view returns (bool) {
+        return super._exists(tokenId);
+    }
+
+    /**
+     * @dev Set escrow address
+     */
+    function setEscrowAddress(address _escrowAddress) external onlyOwner {
+        escrowAddress = _escrowAddress;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the escrow contract.
+     */
+    modifier onlyEscrow() {
+        require(
+            escrowAddress == _msgSender(),
+            "Caller is not the escrow contract"
+        );
+        _;
     }
 }
