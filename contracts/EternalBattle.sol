@@ -116,15 +116,20 @@ contract EternalBattle is ERC721Holder {
     Stake storage _stake = stakes[_id0];
     uint priceEnd = uint(priceFeed.getLatestPrice(_stake.priceFeedId));
     IEthemerals.Meral memory _meral = nftContract.getEthemeral(_id0);
-    bool win = _stake.long ? _stake.startingPrice < priceEnd : _stake.startingPrice > priceEnd;
     uint change = _stake.positionSize * calcBps(_stake.startingPrice, priceEnd);
-    change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
+    change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS DEF
     uint scoreBefore = _meral.score;
 
-    require((win != true && scoreBefore <= (change + 25)), 'not dead');
+    require(scoreBefore <= (change + 35), 'not dead');
     require(_meral.rewards > reviverReward, 'needs ELF');
     nftContract.safeTransferFrom(address(this), stakes[_id0].owner, _id0);
-    nftContract.changeScore(_id0, uint16(scoreBefore - 100), win, 0); // reset scores to 100
+
+    if(scoreBefore < 100) {
+      nftContract.changeScore(_id0, uint16(100 - scoreBefore), true, 0); // reset scores to 100 // ###BUG can be NEGATIVE FIXED
+    } else {
+      nftContract.changeScore(_id0, uint16(scoreBefore - 100), false, 0); // reset scores to 100 // ###BUG can be NEGATIVE FIXED
+    }
+
     nftContract.changeRewards(_id0, reviverReward, false, 1);
     nftContract.changeRewards(_id1, reviverReward, true, 1);
 
@@ -162,7 +167,7 @@ contract EternalBattle is ERC721Holder {
       reward = (_meral.spd * change / spdDivMod) * counterTradeBonus; // DOESNT MATCH JS WHY????
 
     } else {
-      change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS ATK
+      change = ((change - (_meral.def * change / defDivMod)) ) / 1000; // BONUS DEF
     }
     return (change, reward, win);
   }
