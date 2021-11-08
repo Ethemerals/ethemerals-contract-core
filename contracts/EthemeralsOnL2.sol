@@ -9,7 +9,7 @@ import "../openzep/token/ERC721/ERC721.sol";
 import "../openzep/token/ERC20/IERC20.sol";
 import "../openzep/access/Ownable.sol";
 
-contract Ethemerals is ERC721, Ownable {
+contract EthemeralsOnL2 is ERC721, Ownable {
     event ChangeScore(uint256 tokenId, uint16 score, bool add, uint32 rewards);
     event ChangeRewards(
         uint256 tokenId,
@@ -18,9 +18,17 @@ contract Ethemerals is ERC721, Ownable {
         uint8 action
     );
     event PriceChange(uint256 price);
-    event Mint(uint256 id, uint16 elf, uint16 atk, uint16 def, uint16 spd);
+    event Mint(uint256 id, uint32 elf, uint16 atk, uint16 def, uint16 spd);
     event DelegateChange(address indexed delegate, bool add);
     event AllowDelegatesChange(address indexed user, bool allow);
+    event UpdateMeral(
+        uint256 id,
+        uint16 score,
+        uint32 reward,
+        uint16 atk,
+        uint16 def,
+        uint16 spd
+    );
 
     // NFT TOKENOMICS
     // 1-1000 intial sale of 'Ethemerals'
@@ -53,13 +61,16 @@ contract Ethemerals is ERC721, Ownable {
     uint256 public mintPrice = 1 * 10**18; // change once deployed
 
     // ELF at birth
-    uint16 public startingELF = 2000; // need to * 10 ** 18
+    uint32 public startingELF = 2000; // need to * 10 ** 18
 
     // ELF ERC20 address
     address private tokenAddress;
 
+    // Escrow address
+    address private escrowAddress;
+
     // Arrays of Ethemerals
-    Meral[] private allMerals;
+    mapping(uint256 => Meral) private allMerals;
 
     // mapping of EthemeralsBases (only originals)
     mapping(uint256 => uint16[]) private allMeralBases;
@@ -78,7 +89,7 @@ contract Ethemerals is ERC721, Ownable {
 
         // mint the #0 to fix the maths
         _safeMint(msg.sender, 0);
-        allMerals.push(Meral(300, startingELF, 250, 250, 250));
+        allMerals[0] = Meral(300, startingELF, 250, 250, 250);
         emit OwnershipTransferred(address(0), msg.sender);
     }
 
@@ -106,6 +117,57 @@ contract Ethemerals is ERC721, Ownable {
     }
 
     /**
+     * @dev migrates (mints) an Ethemeral
+     * ment to be used during transfer from L1 to L2 when the meral does not exist in this chain yet
+     * only the escrow contract can call this function
+     * sets the supplied id, score, rewards,  atk, def, spd
+     */
+    function migrateMeral(
+        uint256 _id,
+        address recipient,
+        uint16 _score,
+        uint32 _rewards,
+        uint16 _atk,
+        uint16 _def,
+        uint16 _spd
+    ) external onlyEscrow {
+        require(!_exists(_id), "Token already exists");
+        _safeMint(recipient, _id);
+        meralSupply++;
+        allMerals[_id] = Meral(_score, _rewards, _atk, _def, _spd);
+        emit Mint(_id, _rewards, _atk, _def, _spd);
+    }
+
+    /**
+     * @dev updates an existing meral
+     * ment to be used during transfer from L1 to L2 when the meral already exists on this chain
+     * only the escrow contract can call this function
+     * sets the supplied owner, score, rewards,  atk, def, spd
+     */
+    function updateMeral(
+        uint256 _id,
+        address owner,
+        uint16 _score,
+        uint16 _rewards,
+        uint16 _atk,
+        uint16 _def,
+        uint16 _spd
+    ) external onlyEscrow {
+        require(_exists(_id), "Token does not exist yet");
+        Meral storage meral = allMerals[_id];
+        meral.score = _score;
+        meral.rewards = _rewards;
+        meral.atk = _atk;
+        meral.def = _def;
+        meral.spd = _spd;
+        address currentOwner = ownerOf(_id);
+        if (currentOwner != owner) {
+            safeTransferFrom(currentOwner, owner, _id);
+        }
+        emit UpdateMeral(_id, _score, _rewards, _atk, _def, _spd);
+    }
+
+    /**
      * @dev Mints an Ethemeral
      * sets score and startingELF
      * sets random [atk, def, spd]
@@ -120,7 +182,7 @@ contract Ethemerals is ERC721, Ownable {
 
             uint16 spd = 1000 - atk - def;
 
-            allMerals.push(Meral(300, startingELF, atk, def, spd));
+            allMerals[meralSupply] = Meral(300, startingELF, atk, def, spd);
 
             emit Mint(meralSupply, startingELF, atk, def, spd);
 
@@ -331,5 +393,27 @@ contract Ethemerals is ERC721, Ownable {
         }
 
         return super.isApprovedForAll(_owner, _operator);
+    }
+
+    function exists(uint256 tokenId) public view returns (bool) {
+        return super._exists(tokenId);
+    }
+
+    /**
+     * @dev Set escrow address
+     */
+    function setEscrowAddress(address _escrowAddress) external onlyOwner {
+        escrowAddress = _escrowAddress;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the escrow contract.
+     */
+    modifier onlyEscrow() {
+        require(
+            escrowAddress == _msgSender(),
+            "Caller is not the escrow contract"
+        );
+        _;
     }
 }
