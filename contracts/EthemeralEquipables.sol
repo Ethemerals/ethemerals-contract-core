@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
-import "../openzep/token/ERC721/ERC721.sol";
-import "../openzep/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 
 interface IEthemerals {
   function ownerOf(uint256 _tokenId) external view returns (address);

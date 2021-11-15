@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.3;
 
-import "../openzep/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
 
 contract EthemeralLifeForce is Context, ERC20Burnable {
     /**
