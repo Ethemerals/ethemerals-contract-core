@@ -2,10 +2,8 @@
 pragma solidity ^0.8.3;
 
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-// import "../openzep/token/ERC721/utils/ERC721Holder.sol";
-import "@openzeppelin/access/Ownable.sol";
-=
-import "@openzeppelin/security/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./EthemeralsOnL2.sol";
 
 contract EscrowOnL2 is Ownable, Pausable, ERC721Holder {

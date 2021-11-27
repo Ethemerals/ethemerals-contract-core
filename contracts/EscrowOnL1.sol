@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
-import "../openzep/token/ERC721/utils/ERC721Holder.sol";
-import "../openzep/access/Ownable.sol";
-import "../openzep/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./IEthemerals.sol";
 
 contract EscrowOnL1 is Ownable, Pausable, ERC721Holder {
