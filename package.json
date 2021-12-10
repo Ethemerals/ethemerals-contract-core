@@ -25,5 +25,8 @@
     "truffle-contract-size": "^2.0.1",
     "truffle-flattener": "^1.5.0",
     "write-json-file": "^4.3.0"
+  },
+  "devDependencies": {
+    "truffle-plugin-verify": "^0.5.18"
   }
 }

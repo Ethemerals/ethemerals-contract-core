@@ -41,9 +41,9 @@ module.exports = {
 	// contracts_build_directory: path.join(__dirname, "app/packages/contracts/src/abis"),
 
 	networks: {
-		kovan: {
-			provider: () => new HDWalletProvider(process.env.SEED, process.env.ALCHEMY_KOVAN),
-			network_id: 42,
+		live: {
+			provider: () => new HDWalletProvider(process.env.SEED, `https://rinkeby.infura.io/v3/${process.env.PROJECTID}`),
+			network_id: 1,
 			from: process.env.ADDRESS,
 			// gas: 8500000,           // Gas sent with each transaction (default: ~6700000)
 		},
@@ -57,7 +57,7 @@ module.exports = {
 			provider: () => new HDWalletProvider(process.env.SEED, `https://arbitrum-rinkeby.infura.io/v3/${process.env.PROJECTID}`),
 			network_id: 421611,
 			from: process.env.ADDRESS,
-			gas: 501665430,           // Gas sent with each transaction (default: ~6700000)
+			gas: 501665430, // Gas sent with each transaction (default: ~6700000)
 			gasPrice: 100000000,
 		},
 		// Useful for testing. The `development` name is special - truffle uses it by default
@@ -129,5 +129,8 @@ module.exports = {
 	db: {
 		enabled: false,
 	},
-	plugins: ['truffle-contract-size'],
+	api_keys: {
+		etherscan: process.env.ETHERSCAN_KEY,
+	},
+	plugins: ['truffle-contract-size', 'truffle-plugin-verify'],
 };
